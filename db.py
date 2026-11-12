@@ -15,9 +15,12 @@ Stores:
 import json
 import os
 import sqlite3
+import ssl
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
+
+_SSL_CTX = ssl._create_unverified_context()
 
 DB_PATH = os.environ.get(
     "DB_PATH",
@@ -70,7 +73,7 @@ def _sb_request(method, table_or_path, params=None, body=None, prefer="return=re
         data_bytes = json.dumps(body).encode("utf-8")
 
     req = urllib.request.Request(url, data=data_bytes, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=8) as resp:
+    with urllib.request.urlopen(req, timeout=8, context=_SSL_CTX) as resp:
         raw = resp.read().decode("utf-8")
         if not raw:
             return []
