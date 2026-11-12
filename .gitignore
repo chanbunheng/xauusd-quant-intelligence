@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+gold_quant.db
+gold_quant.db-journal
+.DS_Store
+.env
