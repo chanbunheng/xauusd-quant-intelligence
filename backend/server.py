@@ -127,14 +127,34 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
         if path in ("/", "/index.html"):
             index_path = os.path.join(BASE_DIR, "index.html")
-            with open(index_path, "rb") as f:
-                content = f.read()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Cache-Control", "no-store")
-            self.send_header("Content-Length", str(len(content)))
-            self.end_headers()
-            self.wfile.write(content)
+            if not os.path.exists(index_path):
+                index_path = os.path.join(os.path.dirname(BASE_DIR), "frontend", "index.html")
+            if os.path.exists(index_path):
+                with open(index_path, "rb") as f:
+                    content = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Length", str(len(content)))
+                self.end_headers()
+                self.wfile.write(content)
+                return
+            self._send_json({
+                "ok": True,
+                "service": "xauusd-ai-quant-backend",
+                "frontend_url": "https://quant-intelligence.vercel.app",
+                "database": get_db_status(),
+                "endpoints": [
+                    "/api/health",
+                    "/api/tick",
+                    "/api/analyze",
+                    "/api/mtf",
+                    "/api/fundamentals",
+                    "/api/backtests",
+                    "/api/live_signals",
+                    "/api/telegram/status",
+                ],
+            })
             return
 
         symbol = qs.get("symbol", ["OANDA:XAUUSD"])[0]
