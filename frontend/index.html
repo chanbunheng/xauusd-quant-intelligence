@@ -3,109 +3,107 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AurumQuant AI — Institutional XAU/USD Trading & Intelligence Platform (Nuxt 4)</title>
+  <title>AurumQuant AI — Minimalist XAU/USD Trading Terminal (Nuxt 4)</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
 
   <div class="app-shell" id="appShell">
     <!-- ====================================================================
-         1. COLLAPSIBLE INSTITUTIONAL SIDEBAR (AppSidebar)
+         1. DEDICATED SIDEBAR NAVIGATION (7 Focused Views)
          ==================================================================== -->
-    <aside class="app-sidebar" id="appSidebar" aria-label="Primary Navigation">
+    <aside class="app-sidebar" id="appSidebar" aria-label="Sidebar Navigation">
       <div class="sidebar-brand">
         <div class="brand">
           <div class="brand-icon">AU</div>
           <div class="brand-text">
-            <div style="font-size:13.5px;font-weight:800;color:var(--text-0);letter-spacing:-0.02em;white-space:nowrap;">
+            <div style="font-size:13px;font-weight:800;color:var(--text-0);white-space:nowrap;">
               AurumQuant <span style="color:var(--ai-accent);">AI</span>
             </div>
-            <div style="font-size:10px;color:var(--text-2);white-space:nowrap;">
-              Nuxt 4 · XAU/USD Terminal
+            <div style="font-size:9.5px;color:var(--text-2);white-space:nowrap;">
+              XAU/USD · Nuxt 4
             </div>
           </div>
         </div>
-        <button class="sidebar-toggle-btn" id="sidebarCollapseBtn" title="Toggle Sidebar (⌘B)" aria-label="Toggle Sidebar">
-          ⇄
-        </button>
+        <button class="sidebar-toggle-btn" id="sidebarCollapseBtn" title="Toggle Sidebar">⇄</button>
       </div>
 
       <nav class="sidebar-nav">
         <div class="nav-section">
           <div class="nav-section-label">Workspace</div>
-          <button class="nav-item active" data-nav="overview" title="Command Center Overview">
+          <button class="nav-item active" data-nav="overview">
             <span class="nav-item-left">
               <span class="nav-icon">◈</span>
               <span class="nav-item-label">Overview</span>
             </span>
             <span class="nav-badge live">LIVE</span>
           </button>
-          <button class="nav-item" data-nav="terminal" title="Institutional Trading Terminal">
+          <button class="nav-item" data-nav="terminal">
             <span class="nav-item-left">
               <span class="nav-icon">📈</span>
-              <span class="nav-item-label">Trading Terminal</span>
+              <span class="nav-item-label">Chart Terminal</span>
             </span>
-            <span class="nav-badge live">CHART</span>
+            <span class="nav-badge live">PRO</span>
           </button>
         </div>
 
         <div class="nav-section">
-          <div class="nav-section-label">AI Intelligence</div>
-          <button class="nav-item" data-nav="ai-signals" title="AI Signals & 3-Agent Committee">
+          <div class="nav-section-label">Intelligence</div>
+          <button class="nav-item" data-nav="ai-gate">
             <span class="nav-item-left">
               <span class="nav-icon">🧠</span>
-              <span class="nav-item-label">AI Signals & Gate</span>
+              <span class="nav-item-label">AI &amp; Macro News</span>
             </span>
             <span class="nav-badge ai">3-AGENT</span>
           </button>
-          <button class="nav-item" data-nav="ai-assistant" title="Interactive AI Quant Copilot">
+          <button class="nav-item" data-nav="copilot">
             <span class="nav-item-left">
               <span class="nav-icon">✦</span>
-              <span class="nav-item-label">AI Quant Copilot</span>
+              <span class="nav-item-label">Copilot &amp; Lab</span>
             </span>
-            <span class="nav-badge ai">ARGON</span>
+            <span class="nav-badge ai">AI</span>
           </button>
         </div>
 
         <div class="nav-section">
-          <div class="nav-section-label">Trading Operations</div>
-          <button class="nav-item" data-nav="bots" title="Telegram Bot & Autonomous Fleet">
-            <span class="nav-item-left">
-              <span class="nav-icon">🤖</span>
-              <span class="nav-item-label">Bots & Telegram</span>
-            </span>
-            <span class="nav-badge live">24/7</span>
-          </button>
-          <button class="nav-item" data-nav="backtesting" title="Strategy Lab & Deep Backtesting">
+          <div class="nav-section-label">Operations</div>
+          <button class="nav-item" data-nav="backtest">
             <span class="nav-item-left">
               <span class="nav-icon">⚡</span>
-              <span class="nav-item-label">Backtest & Lab</span>
+              <span class="nav-item-label">Backtest &amp; Ledger</span>
             </span>
             <span class="nav-badge live">DB</span>
           </button>
+          <button class="nav-item" data-nav="telegram">
+            <span class="nav-item-left">
+              <span class="nav-icon">🤖</span>
+              <span class="nav-item-label">Telegram Hub</span>
+            </span>
+            <span class="nav-badge live" id="navTgCountBadge">24/7</span>
+          </button>
         </div>
 
         <div class="nav-section">
-          <div class="nav-section-label">Insights & Governance</div>
-          <button class="nav-item" data-nav="risk" title="Risk Management & Feature Flags">
+          <div class="nav-section-label">System</div>
+          <button class="nav-item" data-nav="settings">
             <span class="nav-item-left">
-              <span class="nav-icon">🛡️</span>
-              <span class="nav-item-label">Risk & Modules</span>
+              <span class="nav-icon">⚙️</span>
+              <span class="nav-item-label">Settings &amp; Risk</span>
             </span>
-            <span class="nav-badge preview">CONFIG</span>
+            <span class="nav-badge preview">CFG</span>
           </button>
         </div>
       </nav>
 
       <div class="sidebar-footer">
-        <div style="display:flex;align-items:center;gap:9px;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0;">
           <div class="user-avatar">SC</div>
           <div class="sidebar-footer-text" style="min-width:0;">
-            <div style="font-size:11.5px;font-weight:700;color:var(--text-0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
               Song Chanbunheng
             </div>
-            <div style="font-size:10px;color:var(--buy);white-space:nowrap;">
-              ● Railway + Supabase
+            <div style="font-size:9.5px;color:var(--buy);white-space:nowrap;">
+              ● Cloud Connected
             </div>
           </div>
         </div>
@@ -118,63 +116,50 @@
          ==================================================================== -->
     <div class="app-main">
 
-      <!-- TOP HEADER (AppHeader) -->
+      <!-- COMPACT MINIMALIST HEADER -->
       <header class="app-header">
         <div class="header-left">
-          <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open Navigation Drawer">☰</button>
-          <div class="breadcrumb-box">
-            <div class="breadcrumb-trail">
-              <span>AurumQuant</span>
-              <span>/</span>
-              <span id="pageBreadcrumb" style="color:var(--blue);">Workspace</span>
-            </div>
-            <div class="page-current-title">
-              <span class="live-dot"></span>
-              <span id="pageTitle">AI Command Center</span>
-              <span id="activeStyleBadgeHeader" style="font-size:10.5px;background:rgba(245,196,81,0.16);color:var(--gold-bright);border:1px solid rgba(245,196,81,0.4);padding:2px 8px;border-radius:99px;font-weight:800;">
-                SWING SPECIALIST (1h)
-              </span>
-            </div>
+          <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">☰</button>
+          <div class="page-current-title">
+            <span class="live-dot"></span>
+            <span id="pageTitle">Overview</span>
+            <span id="activeStyleBadgeHeader" style="font-size:10px;background:var(--gold-dim);color:var(--gold-bright);padding:2px 7px;border-radius:99px;font-weight:800;">
+              SWING · 1h
+            </span>
           </div>
-
-          <button class="cmd-trigger" id="openCmdPaletteBtn" title="Open Command Palette (⌘K or Ctrl+K)">
-            <span>⌕ Search commands, symbols, views...</span>
+          <button class="cmd-trigger" id="openCmdPaletteBtn" title="Command Palette (⌘K)">
+            <span>⌕ Quick Jump</span>
             <span class="cmd-kbd">⌘K</span>
           </button>
         </div>
 
         <div class="header-price-box" id="headerPriceBox">
-          <div>
-            <div style="font-size:9.5px;color:var(--text-2);font-weight:700;text-transform:uppercase;" id="headerBrokerLabel">
-              OANDA:XAUUSD (LIVE FEED)
-            </div>
-            <div style="display:flex;align-items:baseline;gap:8px;">
-              <span class="header-price" id="headerPrice">---.--</span>
-              <span id="headerChange" class="tabular" style="font-size:12px;font-weight:700;">--</span>
-            </div>
+          <div style="display:flex;align-items:baseline;gap:7px;">
+            <span style="font-size:10px;color:var(--text-2);font-weight:700;" id="headerBrokerLabel">OANDA</span>
+            <span class="header-price" id="headerPrice">---.--</span>
+            <span id="headerChange" class="tabular" style="font-size:11px;font-weight:700;">--</span>
           </div>
-          <div style="border-left:1px solid var(--border);padding-left:12px;">
-            <div style="font-size:9.5px;color:var(--text-2);text-transform:uppercase;font-weight:700;">Bar Countdown</div>
-            <div id="countdownTimer" class="tabular" style="font-size:13.5px;font-weight:800;color:var(--buy);">00:00</div>
-            <div id="headerTime" style="font-size:9.5px;color:var(--text-2);">Syncing...</div>
+          <div style="border-left:1px solid var(--border);padding-left:10px;display:flex;align-items:center;gap:6px;">
+            <span style="font-size:9.5px;color:var(--text-2);font-weight:700;">BAR</span>
+            <span id="countdownTimer" class="tabular" style="font-size:12px;font-weight:800;color:var(--buy);">00:00</span>
           </div>
         </div>
 
         <div class="controls">
-          <div class="style-group" id="styleGroup" title="Select Trading Style">
-            <button class="style-btn active" data-style="SWING">Swing Trade ★</button>
+          <div class="style-group" id="styleGroup">
+            <button class="style-btn active" data-style="SWING">Swing ★</button>
             <button class="style-btn" data-style="INTRADAY">Intraday</button>
-            <button class="style-btn" data-style="SCALPING">Scalping</button>
+            <button class="style-btn" data-style="SCALPING">Scalp</button>
             <button class="style-btn" data-style="POSITION">Position</button>
           </div>
 
-          <select id="symbolSelect" class="ctrl-select" aria-label="Select Broker Feed">
-            <option value="OANDA:XAUUSD" selected>OANDA:XAUUSD (OANDA)</option>
-            <option value="FX:XAUUSD">FX:XAUUSD (FXCM)</option>
-            <option value="FOREXCOM:XAUUSD">FOREXCOM:XAUUSD (FOREX.com)</option>
+          <select id="symbolSelect" class="ctrl-select" aria-label="Broker">
+            <option value="OANDA:XAUUSD" selected>OANDA</option>
+            <option value="FX:XAUUSD">FXCM</option>
+            <option value="FOREXCOM:XAUUSD">FOREX.com</option>
           </select>
 
-          <div class="tf-group" id="tfGroup" title="Select Chart Timeframe">
+          <div class="tf-group" id="tfGroup">
             <button class="tf-btn" data-tf="1m">1m</button>
             <button class="tf-btn" data-tf="5m">5m</button>
             <button class="tf-btn" data-tf="15m">15m</button>
@@ -183,391 +168,254 @@
             <button class="tf-btn" data-tf="1d">1D</button>
           </div>
 
-          <button class="btn" id="themeToggleBtn" title="Switch Dark / Light Theme">☀/☾</button>
-          <button class="btn tg-btn" id="sendTelegramQuickBtn">Send to Telegram</button>
-          <button class="btn primary" id="refreshBtn">Sync Now</button>
+          <button class="btn" id="themeToggleBtn" title="Toggle Theme">☀/☾</button>
+          <button class="btn tg-btn" id="sendTelegramQuickBtn">Telegram ↗</button>
+          <button class="btn primary" id="refreshBtn">Sync</button>
         </div>
       </header>
 
-      <!-- LIVE MULTI-BROKER TICKER STRIP & TRADING MODE SAFETY INDICATORS -->
+      <!-- SLIM TICKER BAR -->
       <div class="ticker-strip">
         <div class="broker-pills" id="brokerPills">
-          <span class="broker-pill">Connecting to Railway & TradingView multi-broker feeds...</span>
+          <span class="broker-pill">Syncing live feeds...</span>
         </div>
         <div class="session-badges">
-          <span class="mode-safety-pill live-lock" title="Live market analysis connected to Supabase & Telegram">● LIVE DATA + SUPABASE</span>
-          <span class="mode-safety-pill paper-sim" title="Order execution is in safe Paper/Single-Position Lock mode">🛡️ PAPER / LOCK MODE</span>
-          <span id="killzoneText" style="font-weight:700;color:var(--gold-bright);">Session: Evaluating...</span>
+          <span class="mode-safety-pill live-lock">● LIVE FEED</span>
+          <span class="mode-safety-pill paper-sim">🛡️ LOCK GUARD</span>
+          <span id="killzoneText" style="font-weight:700;color:var(--gold-bright);">Session</span>
           <span class="session-badge" id="sessAsia">ASIA</span>
-          <span class="session-badge" id="sessLondon">LONDON</span>
-          <span class="session-badge" id="sessNY">NEW YORK</span>
+          <span class="session-badge" id="sessLondon">LDN</span>
+          <span class="session-badge" id="sessNY">NY</span>
+          <span id="headerTime" class="tabular" style="font-size:10px;color:var(--text-2);">--:--:--</span>
         </div>
       </div>
 
-      <!-- MAIN BENTO CONTENT CONTAINER -->
+      <!-- ==================================================================
+           MAIN VIEW CONTAINER (Only 1 Focused View Visible at a Time!)
+           ================================================================== -->
       <div class="container">
 
         <!-- ================================================================
-             SECTION 1: PORTFOLIO & QUANT OVERVIEW KPI BENTO STRIP (8 Cards)
+             VIEW 1: OVERVIEW (Clean 4-KPI Strip + Signal + MTF Matrix)
              ================================================================ -->
-        <section class="workspace-section" data-section="overview risk">
+        <div class="workspace-view" id="view-overview" data-view="overview">
+          <!-- 4 Minimalist KPI Cards -->
           <div class="bento-kpi-grid">
-            <div class="metric-card profit-accent">
+            <div class="metric-card">
               <div class="metric-top">
-                <span class="metric-label">Simulated Portfolio Equity</span>
-                <span class="metric-origin-tag paper">PAPER ACCOUNT</span>
+                <span class="metric-label">Portfolio Equity</span>
+                <span class="metric-origin-tag paper">PAPER</span>
               </div>
               <div class="metric-val" id="kpiPortfolioEquity">$100,000.00</div>
               <div class="metric-sub">
-                <span>Base $100k + Verified Strategy P&L</span>
+                <span id="kpiActivePosSub">0 Open Trades</span>
                 <span id="kpiPortfolioReturnPct" class="tabular" style="color:var(--buy);font-weight:700;">+0.00%</span>
-              </div>
-            </div>
-
-            <div class="metric-card profit-accent">
-              <div class="metric-top">
-                <span class="metric-label">Net Strategy P&L (Backtest)</span>
-                <span class="metric-origin-tag live">SUPABASE DB</span>
-              </div>
-              <div class="metric-val" id="kpiTotalNetPnl">-- pts</div>
-              <div class="metric-sub">
-                <span id="kpiTotalTradesSub">Across verified backtest</span>
-                <span id="kpiProfitFactorBadge" class="tabular" style="color:var(--blue);font-weight:700;">PF: --</span>
-              </div>
-            </div>
-
-            <div class="metric-card gold-accent">
-              <div class="metric-top">
-                <span class="metric-label">Active Lock Floating P&L</span>
-                <span class="metric-origin-tag live">LIVE LOCK</span>
-              </div>
-              <div class="metric-val" id="kpiUnrealizedPnl">0.00 pts</div>
-              <div class="metric-sub">
-                <span id="kpiActivePosSub">Single-Position Lock Status</span>
-                <span id="kpiActivePosBadge" class="tabular" style="font-weight:700;color:var(--gold-bright);">SCANNING</span>
               </div>
             </div>
 
             <div class="metric-card">
               <div class="metric-top">
-                <span class="metric-label">Verified Win Rate</span>
-                <span class="metric-origin-tag live">QUANT ENGINE</span>
+                <span class="metric-label">Active Signal</span>
+                <span class="metric-origin-tag live" id="kpiActivePosBadge">READY</span>
               </div>
-              <div class="metric-val" id="kpiWinRate">--%</div>
+              <div class="metric-val" id="kpiSignalShort">WAIT</div>
               <div class="metric-sub">
-                <span id="kpiWinLossBreakdown">Wins / Losses</span>
-                <span id="kpiExpectancySub" class="tabular" style="color:var(--text-0);font-weight:700;">Exp: --</span>
+                <span id="kpiSignalEntrySub">Entry: ---</span>
+                <span id="kpiUnrealizedPnl" class="tabular" style="font-weight:700;">0.00 pts</span>
               </div>
             </div>
 
             <div class="metric-card">
               <div class="metric-top">
                 <span class="metric-label">AI Committee Gate</span>
-                <span class="metric-origin-tag paper">3-AGENT + ARGON</span>
+                <span class="metric-origin-tag paper">3-AGENT</span>
               </div>
-              <div class="metric-val" id="kpiAiVerdictShort" style="font-size:16px;color:var(--ai-accent);">EVALUATING...</div>
+              <div class="metric-val" id="kpiAiVerdictShort" style="color:var(--ai-accent);">EVALUATING</div>
               <div class="metric-sub">
-                <span>Model Confidence Score</span>
-                <span id="kpiAiConfPct" class="tabular" style="color:var(--gold-bright);font-weight:800;">--%</span>
+                <span id="kpiDxyPrice">DXY: ---</span>
+                <span id="kpiAiConfPct" class="tabular" style="color:var(--gold-bright);font-weight:700;">--%</span>
               </div>
             </div>
 
             <div class="metric-card">
               <div class="metric-top">
-                <span class="metric-label">US Dollar Index (DXY)</span>
-                <span class="metric-origin-tag live">TVC:DXY LIVE</span>
+                <span class="metric-label">Backtest Win Rate</span>
+                <span class="metric-origin-tag live">SUPABASE</span>
               </div>
-              <div class="metric-val" id="kpiDxyPrice">--</div>
+              <div class="metric-val" id="kpiWinRate">--%</div>
               <div class="metric-sub">
-                <span>Inverse Gold Macro Pressure</span>
-                <span id="kpiDxyGoldBias" style="font-weight:700;color:var(--gold-bright);">--</span>
-              </div>
-            </div>
-
-            <div class="metric-card profit-accent">
-              <div class="metric-top">
-                <span class="metric-label">Autonomous Bot Fleet</span>
-                <span class="metric-origin-tag live">RAILWAY 24/7</span>
-              </div>
-              <div class="metric-val" style="color:var(--buy);font-size:17px;">2 / 2 ONLINE</div>
-              <div class="metric-sub">
-                <span>60s AI Scanner + Telegram Hub</span>
-                <span id="kpiTgSubPill" class="tabular" style="color:var(--blue);font-weight:700;">1 Group</span>
-              </div>
-            </div>
-
-            <div class="metric-card">
-              <div class="metric-top">
-                <span class="metric-label">Max Drawdown & Risk</span>
-                <span class="metric-origin-tag live">RISK GUARD</span>
-              </div>
-              <div class="metric-val" id="kpiMaxDrawdown" style="color:var(--sell);">-- pts</div>
-              <div class="metric-sub">
-                <span id="kpiAtrStopSub">ATR Stop Multiplier</span>
-                <span style="color:var(--buy);font-weight:700;">1 Pos Max</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- ================================================================
-             SECTION 2: PRE-SIGNAL AI AGENT COMMITTEE & TELEGRAM SIGNAL HUB
-             ================================================================ -->
-        <section class="workspace-section top-grid" data-section="overview ai-signals bots">
-          <!-- AI Agent Committee Card -->
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">
-                <span style="color:var(--ai-accent);">●</span> Pre-Signal AI Agent Layer (3-Agent Committee + Gemini 4 Argon)
-              </div>
-              <span id="aiModelUsedBadge" style="font-size:11px;color:var(--gold-bright);font-weight:700;">
-                Initializing AI Committee...
-              </span>
-            </div>
-
-            <div class="ai-gate-banner" id="aiGateBanner">
-              <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
-                <div style="font-size:14px;font-weight:800;color:var(--text-0);" id="aiVerdictTitle">
-                  AI Committee Evaluating Setup...
-                </div>
-                <span id="fibGoldenBadge" class="tabular" style="font-size:11px;background:rgba(245,196,81,0.15);color:var(--gold-bright);padding:3px 9px;border-radius:99px;font-weight:700;">
-                  Fib Golden Pocket: --
-                </span>
-              </div>
-              <div style="font-size:12.5px;color:var(--text-0);line-height:1.5;" id="aiExecSummary">
-                Gathering multi-timeframe technical structure, Fibonacci Golden Pocket zones, and DXY/Reuters macro sentiment before approving final signal...
-              </div>
-              <div style="font-size:11.5px;color:var(--blue);margin-top:6px;font-weight:600;" id="aiRiskNote"></div>
-            </div>
-
-            <div class="ai-committee-grid" id="aiCommitteeGrid">
-              <!-- Populated dynamically by renderAiAgent() -->
-            </div>
-
-            <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--text-1);">
-              <div>
-                <strong style="color:var(--text-0);">Optional Cloud LLM Upgrade (`gemini-4-argon`):</strong> Plug in a Gemini API key to run live cloud LLM inference on top of the local 3-Agent Committee.
-              </div>
-              <div style="display:flex;gap:6px;align-items:center;">
-                <input type="password" id="geminiKeyInput" placeholder="Optional GEMINI_API_KEY (AIza...)" style="background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:5px 9px;border-radius:6px;font-size:11px;width:210px;" />
-                <button class="btn" id="saveGeminiKeyBtn" style="padding:5px 10px;font-size:11px;">Save Key</button>
+                <span id="kpiTotalNetPnl">-- pts</span>
+                <span id="kpiProfitFactorBadge" class="tabular" style="color:var(--blue);font-weight:700;">PF: --</span>
               </div>
             </div>
           </div>
 
-          <!-- Telegram Bot (@this_is_ai_signal_bot) Integration Card -->
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">
-                <span style="color:var(--blue);">●</span> Telegram Bot Signal Hub (`@this_is_ai_signal_bot`)
-              </div>
-              <span id="tgBotStatusBadge" style="font-size:11px;background:var(--buy-dim);color:var(--buy);padding:3px 9px;border-radius:99px;font-weight:700;">
-                Checking Bot...
-              </span>
-            </div>
-
-            <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px;font-size:12px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
-                <div>
-                  <strong style="color:var(--text-0);">Connected Bot:</strong>
-                  <a href="https://t.me/this_is_ai_signal_bot" target="_blank" id="tgBotLink" style="color:var(--blue);font-weight:700;text-decoration:none;margin-left:4px;">@this_is_ai_signal_bot (AI Bot Signal) ↗</a>
-                </div>
-                <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--gold-bright);">
-                  <input type="checkbox" id="tgAutoNotifyChk" checked />
-                  Auto-Push New Signals & TP/SL
-                </label>
-              </div>
-              <div style="color:var(--text-1);font-size:11.5px;margin-bottom:10px;">
-                <strong>1-Step Telegram Connection:</strong> Open <a href="https://t.me/this_is_ai_signal_bot" target="_blank" style="color:var(--gold-bright);font-weight:700;">@this_is_ai_signal_bot</a> and send <strong><code>/start</code></strong> (or <code>/swing</code>, <code>/intraday</code>, <code>/scalp</code>, <code>/news</code>), OR enter a Chat ID below:
-              </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <input type="text" id="tgChatIdInput" placeholder="Optional Chat ID (e.g. -5523180993)" style="flex:1;min-width:180px;background:var(--bg-1);border:1px solid var(--border);color:var(--text-0);padding:7px 10px;border-radius:7px;font-size:12px;" />
-                <button class="btn" id="tgSyncBtn">Detect / Sync `/start`</button>
-                <button class="btn primary" id="tgSendNowBtn">Broadcast Signal Now</button>
-              </div>
-            </div>
-
-            <div style="display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1.35fr);gap:10px;min-width:0;">
-              <div style="min-width:0;">
-                <div style="font-size:10px;font-weight:700;color:var(--gold-bright);text-transform:uppercase;margin-bottom:5px;">
-                  Subscribed Telegram Chats (<span id="tgSubCount">0</span>)
-                </div>
-                <div id="tgSubscribersList" style="height:140px;overflow-y:auto;overflow-x:hidden;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:11px;color:var(--text-1);word-break:break-word;">
-                  No chats registered yet. Send <code>/start</code> to <strong>@this_is_ai_signal_bot</strong>!
-                </div>
-              </div>
-              <div style="min-width:0;">
-                <div style="font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;margin-bottom:5px;">
-                  Recent Telegram Bot Deliveries
-                </div>
-                <div id="tgLogsList" style="height:140px;overflow-y:auto;overflow-x:hidden;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:11px;color:var(--text-1);word-break:break-word;">
-                  No messages sent yet.
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- ================================================================
-             SECTION 3: ACTIVE AI-VETTED SIGNAL & MULTI-TIMEFRAME MATRIX
-             ================================================================ -->
-        <section class="workspace-section top-grid" data-section="overview ai-signals terminal">
-          <!-- Left: Active Signal & Entry/SL/TP Card -->
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">
-                Active AI-Vetted Trade Signal (<span id="activeTfLabel">SWING · 1h</span>)
-              </div>
-              <span id="regimeBadge" style="font-size:11px;color:var(--gold-bright);font-weight:700;">Evaluating Regime...</span>
-            </div>
-
-            <div class="lock-banner" id="lockBanner">
-              <div>
-                <strong style="color:var(--blue);" id="lockTitle">Strict Single-Position Lock:</strong>
-                <span id="lockReason">Checking active position state in Supabase PostgreSQL...</span>
-              </div>
-              <button class="btn" id="closePosBtn" style="display:none;padding:4px 10px;font-size:11px;border-color:var(--sell);color:var(--sell);">
-                Close Active Position
-              </button>
-            </div>
-
-            <div class="signal-hero">
-              <div class="signal-badge NEUTRAL" id="signalBadge">
-                <div class="dir" id="signalDir">WAIT</div>
-                <div class="conf" id="signalConf">Confidence: --%</div>
-                <div style="font-size:10.5px;margin-top:4px;opacity:0.85;" id="signalSubType">--</div>
-              </div>
-
-              <div class="levels-grid">
-                <div class="level-box entry">
-                  <div class="lbl">Entry Zone</div>
-                  <div class="val" id="lvlEntry">---.--</div>
-                  <div style="font-size:10px;color:var(--text-2);margin-top:2px;" id="lvlSpread">Spread: --</div>
-                </div>
-                <div class="level-box sl">
-                  <div class="lbl">Stop Loss (SL)</div>
-                  <div class="val" id="lvlSL">---.--</div>
-                  <div style="font-size:10px;color:var(--text-2);margin-top:2px;" id="lvlRisk">Risk: -- pts</div>
-                </div>
-                <div class="level-box tp1">
-                  <div class="lbl">Take Profit 1</div>
-                  <div class="val" id="lvlTP1">---.--</div>
-                  <div style="font-size:10px;color:var(--text-2);margin-top:2px;" id="lvlRR1">R:R 1:--</div>
-                </div>
-                <div class="level-box tp2">
-                  <div class="lbl">Take Profit 2</div>
-                  <div class="val" id="lvlTP2">---.--</div>
-                  <div style="font-size:10px;color:var(--text-2);margin-top:2px;" id="lvlRR2">R:R 1:--</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="rationale-box" id="rationaleBox">
-              Loading real-time TradingView candles and running 3-Agent AI Committee verification...
-            </div>
-
-            <div class="checklist" id="checklistGrid"></div>
-          </div>
-
-          <!-- Right: Multi-Timeframe Confluence Matrix -->
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Multi-Timeframe Confluence (`1m` → `1D`)</div>
-              <span id="mtfAlignmentBadge" class="pill NEUTRAL">Syncing MTF...</span>
-            </div>
-
-            <div style="overflow-x:auto;">
-              <table class="mtf-table">
-                <thead>
-                  <tr>
-                    <th>TF</th>
-                    <th>Signal</th>
-                    <th>Conf</th>
-                    <th>Trend Regime</th>
-                    <th>RSI(14)</th>
-                    <th>Entry</th>
-                    <th>SL</th>
-                    <th>TP1</th>
-                  </tr>
-                </thead>
-                <tbody id="mtfTableBody">
-                  <tr><td colspan="8" style="text-align:center;color:var(--text-2);padding:20px;">Loading multi-timeframe matrix...</td></tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div style="margin-top:14px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;">
-              <div class="stat-card">
-                <div class="k">Pivot Point (P)</div>
-                <div class="v" id="pivP">---.--</div>
-                <div style="font-size:10px;color:var(--text-2);margin-top:2px;" id="pivR1S1">R1: -- / S1: --</div>
-              </div>
-              <div class="stat-card">
-                <div class="k">Fib Golden Pocket</div>
-                <div class="v" id="vwapVal" style="color:var(--gold-bright);font-size:14.5px;">---.--</div>
-                <div style="font-size:10px;color:var(--text-2);margin-top:2px;" id="bbWidthVal">BB Width: --%</div>
-              </div>
-              <div class="stat-card">
-                <div class="k">ATR(14) Volatility</div>
-                <div class="v" id="atrVal">---.--</div>
-                <div style="font-size:10px;color:var(--text-2);margin-top:2px;" id="emaRibbonVal">EMA21/50: --</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- ================================================================
-             SECTION 4: 4-REGION INSTITUTIONAL TRADING TERMINAL
-             (Left Watchlist | Center Candlestick & Osc | Right Paper Order Ticket)
-             ================================================================ -->
-        <section class="workspace-section" data-section="overview terminal">
-          <div class="terminal-workspace-grid">
-            <!-- LEFT REGION: Market Watchlist & Multi-Asset Correlation -->
-            <div class="card terminal-watchlist-col" style="display:flex;flex-direction:column;justify-content:space-between;">
-              <div>
-                <div class="card-header" style="margin-bottom:10px;">
-                  <div class="card-title">Market Watchlist</div>
-                  <span style="font-size:10px;color:var(--buy);font-weight:700;">● LIVE + CORR</span>
-                </div>
-                <input
-                  type="text"
-                  id="watchlistSearchInput"
-                  placeholder="Filter symbol (XAU, DXY, XAG...)"
-                  style="width:100%;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:6px 10px;border-radius:7px;font-size:11.5px;margin-bottom:10px;"
-                />
-                <div id="terminalWatchlistContainer">
-                  <!-- Populated dynamically by renderTerminalWatchlist() -->
-                </div>
-              </div>
-
-              <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:10.5px;color:var(--text-2);line-height:1.4;">
-                <strong style="color:var(--text-1);">Data Integrity Notice:</strong> XAU/USD broker feeds &amp; DXY are streamed live from TradingView. Correlated macro rows marked <span style="color:var(--gold-bright);">SIM</span> are deterministic reference previews.
-              </div>
-            </div>
-
-            <!-- CENTER REGION: Primary Candlestick Chart & RSI/MACD Oscillator -->
+          <!-- Active Signal + MTF Matrix Side-by-Side -->
+          <div class="split-grid">
+            <!-- Left: Minimalist Signal Card -->
             <div class="card">
               <div class="card-header">
                 <div class="card-title">
-                  TradingView Spot Candlesticks, Swing EMA Ribbon &amp; Active Position Levels
+                  <span>🎯 Active Signal</span>
+                  <span id="activeTfLabel" style="color:var(--gold-bright);">SWING · 1h</span>
                 </div>
-                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                  <button class="btn" id="toggleBBBtn" style="padding:4px 10px;font-size:11px;">Bollinger Bands: ON</button>
-                  <button class="btn" id="toggleLevelsBtn" style="padding:4px 10px;font-size:11px;">Signal Lines: ON</button>
-                  <button class="btn" id="toggleOscBtn" style="padding:4px 10px;font-size:11px;">Oscillator: RSI (14)</button>
+                <div style="display:flex;gap:6px;align-items:center;">
+                  <span id="regimeBadge" class="pill NEUTRAL">--</span>
+                  <button class="btn" data-jump="terminal" style="padding:3px 8px;font-size:10.5px;">Open Chart ↗</button>
                 </div>
               </div>
 
-              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--text-1);margin-bottom:8px;flex-wrap:wrap;gap:8px;">
-                <div id="chartLegend" style="display:flex;gap:14px;flex-wrap:wrap;">
+              <div class="lock-banner" id="lockBanner">
+                <div style="min-width:0;">
+                  <strong id="lockTitle" style="color:var(--blue);">Lock Ready:</strong>
+                  <span id="lockReason">0 Active Positions.</span>
+                </div>
+                <button class="btn danger" id="closePosBtn" style="display:none;padding:3px 9px;font-size:10.5px;">
+                  Close Position
+                </button>
+              </div>
+
+              <div class="signal-hero">
+                <div class="signal-badge NEUTRAL" id="signalBadge">
+                  <div class="dir" id="signalDir">WAIT</div>
+                  <div class="conf" id="signalConf">--%</div>
+                  <div style="font-size:9.5px;margin-top:3px;opacity:0.85;" id="signalSubType">--</div>
+                </div>
+
+                <div class="levels-grid">
+                  <div class="level-box entry">
+                    <div class="lbl">Entry</div>
+                    <div class="val" id="lvlEntry">---.--</div>
+                    <div style="font-size:9.5px;color:var(--text-2);" id="lvlSpread">Spot</div>
+                  </div>
+                  <div class="level-box sl">
+                    <div class="lbl">Stop Loss</div>
+                    <div class="val" id="lvlSL">---.--</div>
+                    <div style="font-size:9.5px;color:var(--text-2);" id="lvlRisk">-- pts</div>
+                  </div>
+                  <div class="level-box tp1">
+                    <div class="lbl">TP 1 (BE)</div>
+                    <div class="val" id="lvlTP1">---.--</div>
+                    <div style="font-size:9.5px;color:var(--text-2);" id="lvlRR1">1:--</div>
+                  </div>
+                  <div class="level-box tp2">
+                    <div class="lbl">TP 2</div>
+                    <div class="val" id="lvlTP2">---.--</div>
+                    <div style="font-size:9.5px;color:var(--text-2);" id="lvlRR2">1:--</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rationale-box" id="rationaleBox">Syncing signal rationale...</div>
+              <div class="checklist" id="checklistGrid"></div>
+            </div>
+
+            <!-- Right: Clean MTF Confluence Table -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Multi-Timeframe Matrix</div>
+                <span id="mtfAlignmentBadge" class="pill NEUTRAL">Syncing...</span>
+              </div>
+
+              <div class="table-scroll-wrap">
+                <table class="mtf-table">
+                  <thead>
+                    <tr>
+                      <th>TF</th>
+                      <th>Bias</th>
+                      <th>Conf</th>
+                      <th>EMA</th>
+                      <th>RSI</th>
+                      <th>Entry</th>
+                      <th>SL</th>
+                      <th>TP1</th>
+                    </tr>
+                  </thead>
+                  <tbody id="mtfTableBody">
+                    <tr><td colspan="8" style="text-align:center;color:var(--text-2);padding:16px;">Loading...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div style="margin-top:10px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
+                <div class="stat-card">
+                  <div class="k">Pivot (P)</div>
+                  <div class="v" id="pivP">---.--</div>
+                  <div style="font-size:9.5px;color:var(--text-2);" id="pivR1S1">R1/S1</div>
+                </div>
+                <div class="stat-card">
+                  <div class="k">Golden Pocket</div>
+                  <div class="v" id="vwapVal" style="color:var(--gold-bright);">---.--</div>
+                  <div style="font-size:9.5px;color:var(--text-2);" id="bbWidthVal">RSI: --</div>
+                </div>
+                <div class="stat-card">
+                  <div class="k">ATR(14)</div>
+                  <div class="v" id="atrVal">---.--</div>
+                  <div style="font-size:9.5px;color:var(--text-2);" id="emaRibbonVal">EMA21/50</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Navigation Strip -->
+          <div class="card" style="padding:11px 15px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-1);">
+              <span style="color:var(--ai-accent);font-weight:800;">✦ Workspace Modules:</span>
+              <span>Inspect Candlesticks, 3-Agent AI Gate, Copilot, or Historical Backtests from the sidebar.</span>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="btn" data-jump="terminal">📈 Chart Terminal</button>
+              <button class="btn" data-jump="ai-gate">🧠 AI &amp; Macro</button>
+              <button class="btn" data-jump="backtest">⚡ Backtest</button>
+              <button class="btn" data-jump="telegram">🤖 Telegram Hub</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================
+             VIEW 2: TRADING TERMINAL (Watchlist + Chart + Paper Order Sizer)
+             ================================================================ -->
+        <div class="workspace-view hidden-view" id="view-terminal" data-view="terminal">
+          <div class="terminal-workspace-grid">
+            <!-- Left: Watchlist -->
+            <div class="card terminal-watchlist-col">
+              <div class="card-header">
+                <div class="card-title">Watchlist</div>
+                <span style="font-size:9.5px;color:var(--buy);font-weight:700;">● LIVE</span>
+              </div>
+              <input
+                type="text"
+                id="watchlistSearchInput"
+                placeholder="Filter symbol..."
+                style="width:100%;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:6px 9px;border-radius:7px;font-size:11px;margin-bottom:8px;"
+              />
+              <div id="terminalWatchlistContainer"></div>
+            </div>
+
+            <!-- Center: Candlesticks & Oscillator -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <span>Spot Chart</span>
+                  <span id="chartHeaderSymTf" style="color:var(--gold-bright);">OANDA:XAUUSD · 1h</span>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <button class="btn" id="toggleBBBtn" style="padding:3px 8px;font-size:10.5px;">BB: ON</button>
+                  <button class="btn" id="toggleLevelsBtn" style="padding:3px 8px;font-size:10.5px;">Levels: ON</button>
+                  <button class="btn" id="toggleOscBtn" style="padding:3px 8px;font-size:10.5px;">Osc: RSI</button>
+                </div>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-1);margin-bottom:6px;flex-wrap:wrap;gap:6px;">
+                <div style="display:flex;gap:12px;">
                   <span><b style="color:#38bdf8;">●</b> EMA 9</span>
                   <span><b style="color:#f5c451;">●</b> EMA 21</span>
                   <span><b style="color:#a855f7;">●</b> EMA 50</span>
-                  <span><b style="color:#00d4aa;">┄</b> TP1 / TP2</span>
-                  <span><b style="color:#f43f5e;">┄</b> Stop Loss</span>
+                  <span><b style="color:#00d4aa;">┄</b> TP</span>
+                  <span><b style="color:#f43f5e;">┄</b> SL</span>
                 </div>
-                <div id="hoverOhlcInfo" class="tabular" style="font-weight:700;color:var(--text-0);">
-                  Hover chart to inspect candle (UTC+7)
+                <div id="hoverOhlcInfo" class="tabular" style="font-weight:600;color:var(--text-0);">
+                  Hover candle to inspect
                 </div>
               </div>
 
@@ -577,373 +425,434 @@
               </div>
             </div>
 
-            <!-- RIGHT REGION: Instrument Details & Paper Order Simulator / Risk Sizer -->
-            <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;">
+            <!-- Right: Position Sizer & Paper Order Ticket -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Order Sizer</div>
+                <span class="mode-safety-pill paper-sim">PAPER</span>
+              </div>
+
+              <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                  <span style="color:var(--text-2);">Symbol</span>
+                  <strong class="tabular" id="ticketSymbolLbl">OANDA:XAUUSD</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                  <span style="color:var(--text-2);">Signal Bias</span>
+                  <strong class="tabular" id="ticketBiasLbl">--</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;">
+                  <span style="color:var(--text-2);">SL Distance</span>
+                  <strong class="tabular" id="ticketStopDistLbl">-- pts</strong>
+                </div>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:8px;font-size:11px;">
+                <div>
+                  <label style="color:var(--text-2);font-size:10px;font-weight:700;">ACCOUNT EQUITY ($)</label>
+                  <input type="number" id="riskAccountInput" value="10000" step="500" style="width:100%;margin-top:3px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:6px 9px;border-radius:6px;font-family:var(--font-mono);" />
+                </div>
+                <div>
+                  <label style="color:var(--text-2);font-size:10px;font-weight:700;">RISK PER TRADE (%)</label>
+                  <input type="number" id="riskPctInput" value="1.0" step="0.25" min="0.1" max="5" style="width:100%;margin-top:3px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:6px 9px;border-radius:6px;font-family:var(--font-mono);" />
+                </div>
+              </div>
+
+              <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:10px;font-size:11px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                  <span style="color:var(--text-2);">Dollar Risk</span>
+                  <strong class="tabular" id="calcDollarRisk" style="color:var(--sell);">$100.00</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                  <span style="color:var(--text-2);">Size (Ounces)</span>
+                  <strong class="tabular" id="calcOuncesSize" style="color:var(--buy);">-- oz</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;">
+                  <span style="color:var(--text-2);">Standard Lots</span>
+                  <strong class="tabular" id="calcLotSize" style="color:var(--gold-bright);">-- lots</strong>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+                <button class="btn" id="simBuyBtn" style="justify-content:center;background:var(--buy-dim);border-color:var(--buy);color:var(--buy);font-weight:800;">
+                  Sim BUY
+                </button>
+                <button class="btn" id="simSellBtn" style="justify-content:center;background:var(--sell-dim);border-color:var(--sell);color:var(--sell);font-weight:800;">
+                  Sim SELL
+                </button>
+              </div>
+              <div id="simOrderFeedback" style="margin-top:8px;font-size:10.5px;color:var(--text-1);min-height:16px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================
+             VIEW 3: AI & MACRO NEWS (3-Agent Committee + DXY + Wire News)
+             ================================================================ -->
+        <div class="workspace-view hidden-view" id="view-ai-gate" data-view="ai-gate">
+          <!-- 3-Agent AI Committee Card -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span style="color:var(--ai-accent);">●</span> 3-Agent AI Committee Gate
+              </div>
+              <span id="aiModelUsedBadge" style="font-size:10.5px;color:var(--gold-bright);font-weight:700;">--</span>
+            </div>
+
+            <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:9px;padding:12px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+                <strong style="font-size:13px;color:var(--text-0);" id="aiVerdictTitle">Evaluating...</strong>
+                <span id="fibGoldenBadge" class="tabular" style="font-size:10.5px;background:var(--gold-dim);color:var(--gold-bright);padding:2px 8px;border-radius:99px;font-weight:700;">
+                  Golden Pocket: --
+                </span>
+              </div>
+              <div style="font-size:11.5px;color:var(--text-1);" id="aiExecSummary">Syncing AI summary...</div>
+            </div>
+
+            <div class="ai-committee-grid" id="aiCommitteeGrid"></div>
+          </div>
+
+          <!-- DXY Macro & Live News Wire -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Macro Correlation (`TVC:DXY`) &amp; Wire News</div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span id="eventAlertPill" style="display:none;background:var(--sell-dim);color:var(--sell);padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;"></span>
+                <button class="btn" id="refreshNewsBtn">Refresh News</button>
+              </div>
+            </div>
+
+            <div class="split-grid">
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                  <div class="stat-card">
+                    <div class="k">News Sentiment</div>
+                    <div class="v" id="fundBiasVal">NEUTRAL</div>
+                    <div style="font-size:10px;color:var(--text-2);" id="fundScoreSub">--</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="k">DXY Index</div>
+                    <div class="v" id="fundDxyPrice" style="color:var(--gold-bright);">---.---</div>
+                    <div style="font-size:10px;color:var(--text-2);" id="fundDxyImpact">--</div>
+                  </div>
+                </div>
+                <div class="stat-card">
+                  <div class="k">Macro Synthesis</div>
+                  <div style="font-size:11.5px;color:var(--text-1);margin-top:4px;" id="fundSummaryText">--</div>
+                </div>
+              </div>
+
               <div>
-                <div class="card-header" style="margin-bottom:10px;">
-                  <div class="card-title">Position Sizer &amp; Order Sim</div>
-                  <span class="mode-safety-pill paper-sim">PAPER MODE</span>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                  <span style="font-size:10.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;">Wire Headlines</span>
+                  <span id="newsCountLabel" style="font-size:10px;color:var(--text-2);">--</span>
                 </div>
-
-                <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:9px;padding:11px;margin-bottom:12px;font-size:11.5px;">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                    <span style="color:var(--text-2);">Active Instrument</span>
-                    <strong class="tabular" id="ticketSymbolLbl">OANDA:XAUUSD</strong>
-                  </div>
-                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                    <span style="color:var(--text-2);">AI Signal Bias</span>
-                    <strong class="tabular" id="ticketBiasLbl" style="color:var(--gold-bright);">EVALUATING</strong>
-                  </div>
-                  <div style="display:flex;justify-content:space-between;">
-                    <span style="color:var(--text-2);">Stop Distance</span>
-                    <strong class="tabular" id="ticketStopDistLbl">-- pts</strong>
-                  </div>
-                </div>
-
-                <div style="display:flex;flex-direction:column;gap:9px;font-size:11.5px;">
-                  <div>
-                    <label style="color:var(--text-2);font-size:10.5px;font-weight:700;text-transform:uppercase;">Account Equity ($ USD)</label>
-                    <input type="number" id="riskAccountInput" value="10000" step="500" style="width:100%;margin-top:3px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:6px 10px;border-radius:7px;font-family:var(--font-mono);" />
-                  </div>
-                  <div>
-                    <label style="color:var(--text-2);font-size:10.5px;font-weight:700;text-transform:uppercase;">Risk Per Trade (%)</label>
-                    <input type="number" id="riskPctInput" value="1.0" step="0.25" min="0.1" max="5" style="width:100%;margin-top:3px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:6px 10px;border-radius:7px;font-family:var(--font-mono);" />
-                  </div>
-                </div>
-
-                <div style="background:linear-gradient(135deg,rgba(0,212,170,0.1),rgba(56,189,248,0.08));border:1px solid rgba(0,212,170,0.35);border-radius:9px;padding:11px;margin-top:12px;">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:11.5px;">
-                    <span style="color:var(--text-1);">Max Dollar Risk:</span>
-                    <strong class="tabular" id="calcDollarRisk" style="color:var(--sell);">$100.00</strong>
-                  </div>
-                  <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:11.5px;">
-                    <span style="color:var(--text-1);">Recommended Size (oz):</span>
-                    <strong class="tabular" id="calcOuncesSize" style="color:var(--buy);">-- oz</strong>
-                  </div>
-                  <div style="display:flex;justify-content:space-between;font-size:11.5px;">
-                    <span style="color:var(--text-1);">Standard Lots (100 oz):</span>
-                    <strong class="tabular" id="calcLotSize" style="color:var(--gold-bright);">-- lots</strong>
-                  </div>
-                </div>
-
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
-                  <button class="btn" id="simBuyBtn" style="justify-content:center;background:var(--buy-dim);border-color:var(--buy);color:var(--buy);font-weight:800;">
-                    Sim Paper BUY
-                  </button>
-                  <button class="btn" id="simSellBtn" style="justify-content:center;background:var(--sell-dim);border-color:var(--sell);color:var(--sell);font-weight:800;">
-                    Sim Paper SELL
-                  </button>
-                </div>
-                <div id="simOrderFeedback" style="margin-top:8px;font-size:11px;color:var(--text-1);min-height:18px;"></div>
-              </div>
-
-              <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text-2);">
-                🛡️ <strong>Trading Safety Guard:</strong> Simulated Paper Order calculator never submits unapproved live broker orders.
+                <div class="news-list" id="newsList"></div>
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
         <!-- ================================================================
-             SECTION 5: AI QUANT COPILOT ASSISTANT & STRATEGY LAB BLUEPRINTS
+             VIEW 4: COPILOT & STRATEGY LAB
              ================================================================ -->
-        <section class="workspace-section top-grid" data-section="overview ai-assistant backtesting">
-          <!-- Interactive AI Quant Copilot -->
+        <div class="workspace-view hidden-view" id="view-copilot" data-view="copilot">
+          <div class="equal-grid">
+            <!-- AI Quant Copilot -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">✦ AI Quant Copilot</div>
+                <button class="btn" id="clearCopilotBtn" style="padding:3px 8px;font-size:10px;">Clear</button>
+              </div>
+
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+                <button class="prompt-chip" data-prompt="swing">1H Golden Pocket</button>
+                <button class="prompt-chip" data-prompt="dxy">DXY Macro Impact</button>
+                <button class="prompt-chip" data-prompt="risk">Optimal Lot Size</button>
+                <button class="prompt-chip" data-prompt="mtf">MTF Confluence</button>
+              </div>
+
+              <div class="assistant-chat-box" id="aiCopilotChatBox">
+                <div class="chat-msg ai">
+                  Ask anything about live XAU/USD levels, Golden Pocket zones, DXY correlation, or position sizing.
+                </div>
+              </div>
+
+              <div style="display:flex;gap:6px;margin-top:8px;">
+                <input
+                  type="text"
+                  id="aiCopilotInput"
+                  placeholder="Ask Copilot..."
+                  style="flex:1;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:7px 10px;border-radius:7px;font-size:11.5px;"
+                />
+                <button class="btn ai-btn" id="aiCopilotSendBtn">Ask</button>
+              </div>
+            </div>
+
+            <!-- Strategy Lab Blueprints -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">⚡ Strategy Lab Blueprints</div>
+                <span style="font-size:10px;color:var(--text-2);">CLICK TO APPLY</span>
+              </div>
+              <div id="strategyLabGrid" style="display:grid;grid-template-columns:1fr;gap:8px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================
+             VIEW 5: BACKTEST & SUPABASE LEDGER (Tabbed Zero-Overflow Tables)
+             ================================================================ -->
+        <div class="workspace-view hidden-view" id="view-backtest" data-view="backtest">
           <div class="card">
             <div class="card-header">
-              <div class="card-title">
-                <span style="color:var(--ai-accent);">✦</span> AI Quant Intelligence Copilot
-              </div>
-              <span class="mode-safety-pill paper-sim">CONTEXT-AWARE · LIVE STATE</span>
-            </div>
-
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-              <button class="prompt-chip" data-prompt="swing">Analyze 1H Swing Golden Pocket</button>
-              <button class="prompt-chip" data-prompt="dxy">Explain DXY &amp; Macro Impact Now</button>
-              <button class="prompt-chip" data-prompt="risk">Calculate Optimal Position Size</button>
-              <button class="prompt-chip" data-prompt="mtf">Summarize MTF Confluence</button>
-            </div>
-
-            <div class="assistant-chat-box" id="aiCopilotChatBox">
-              <div class="chat-msg ai">
-                <div style="font-size:10.5px;font-weight:800;color:var(--ai-accent);margin-bottom:3px;">
-                  AURUMQUANT AI COPILOT · LIVE MARKET STATE
-                </div>
-                Select any prompt above or ask a question below to synthesize real-time XAU/USD structure, Fibonacci Golden Pocket zones, DXY correlation, and risk-adjusted position sizing.
-              </div>
-            </div>
-
-            <div style="display:flex;gap:8px;margin-top:10px;">
-              <input
-                type="text"
-                id="aiCopilotInput"
-                placeholder="Ask about XAU/USD entry zones, SL/TP math, DXY correlation, or backtest stats..."
-                style="flex:1;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:8px 12px;border-radius:8px;font-size:12px;"
-              />
-              <button class="btn ai-btn" id="aiCopilotSendBtn">Ask Copilot</button>
-            </div>
-          </div>
-
-          <!-- Strategy Lab Blueprints -->
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">
-                <span style="color:var(--gold-bright);">⚡</span> Strategy Lab &amp; Quant Blueprints
-              </div>
-              <span style="font-size:10.5px;color:var(--text-2);font-weight:700;">CLICK TO LOAD PRESET</span>
-            </div>
-
-            <div id="strategyLabGrid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
-              <!-- Populated dynamically by renderStrategyLab() -->
-            </div>
-          </div>
-        </section>
-
-        <!-- ================================================================
-             SECTION 6: FUNDAMENTAL ANALYSIS, MACRO CORRELATIONS (DXY) & NEWS
-             ================================================================ -->
-        <section class="workspace-section card" data-section="overview ai-signals">
-          <div class="card-header">
-            <div class="card-title">
-              Fundamental Analysis, Macro Correlations (`TVC:DXY`) &amp; Live News Sentiment
-            </div>
-            <div style="display:flex;gap:10px;align-items:center;">
-              <span id="eventAlertPill" style="display:none;background:var(--sell-dim);color:var(--sell);border:1px solid rgba(244,63,94,0.45);padding:4px 10px;border-radius:99px;font-size:11px;font-weight:800;"></span>
-              <button class="btn" id="refreshNewsBtn">Refresh News &amp; Macro</button>
-            </div>
-          </div>
-
-          <div class="fund-grid">
-            <div style="display:flex;flex-direction:column;gap:10px;">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <div class="stat-card">
-                  <div class="k">Fundamental Gold Bias</div>
-                  <div class="v" id="fundBiasVal">NEUTRAL (0)</div>
-                  <div style="font-size:10.5px;color:var(--text-2);margin-top:3px;" id="fundScoreSub">Analyzing headlines...</div>
-                </div>
-                <div class="stat-card">
-                  <div class="k">US Dollar Index (`TVC:DXY`)</div>
-                  <div class="v" id="fundDxyPrice" style="color:var(--gold-bright);">---.---</div>
-                  <div style="font-size:10.5px;color:var(--text-2);margin-top:3px;" id="fundDxyImpact">Inverse Gold Impact: --</div>
-                </div>
-              </div>
-              <div class="stat-card" style="flex:1;">
-                <div class="k">Macro Synthesis</div>
-                <div style="font-size:12px;color:var(--text-0);margin-top:5px;line-height:1.45;" id="fundSummaryText">
-                  Fetching live DXY correlation and TradingView Gold headlines...
-                </div>
-                <div style="font-size:11px;color:var(--text-2);margin-top:6px;">
-                  <strong>Rule:</strong> Rising DXY pressures XAU/USD lower (Bearish Gold); Falling DXY boosts XAU/USD higher (Bullish Gold).
-                </div>
+              <div class="card-title">⚡ Deep Historical Backtest Engine</div>
+              <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                <select id="btStrategySelect" class="ctrl-select">
+                  <option value="ALL" selected>All Strategies</option>
+                  <option value="SWING_GOLDEN_POCKET">Swing Golden Pocket</option>
+                  <option value="PRO_TREND_PULLBACK">EMA Pullback</option>
+                  <option value="LIQUIDITY_SWEEP_REVERSAL">Liquidity Sweep</option>
+                  <option value="MOMENTUM_BREAKOUT">Momentum Breakout</option>
+                </select>
+                <select id="btHorizonSelect" class="ctrl-select">
+                  <option value="300">300 Bars</option>
+                  <option value="7d">7 Days</option>
+                  <option value="30d" selected>30 Days</option>
+                  <option value="90d">90 Days</option>
+                  <option value="1y">1 Year</option>
+                </select>
+                <label style="font-size:10.5px;color:var(--text-2);">SL <input type="number" id="btSlInput" value="1.5" step="0.1" style="width:46px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:3px 5px;border-radius:5px;font-size:10.5px;" /></label>
+                <label style="font-size:10.5px;color:var(--text-2);">TP1 <input type="number" id="btTp1Input" value="2.5" step="0.1" style="width:46px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:3px 5px;border-radius:5px;font-size:10.5px;" /></label>
+                <label style="font-size:10.5px;color:var(--text-2);">TP2 <input type="number" id="btTp2Input" value="4.0" step="0.1" style="width:46px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:3px 5px;border-radius:5px;font-size:10.5px;" /></label>
+                <button class="btn primary" id="runBacktestBtn">Run Backtest</button>
+                <button class="btn" id="exportCsvBtn">Export CSV</button>
               </div>
             </div>
 
-            <div>
-              <div style="font-size:11px;font-weight:700;color:var(--gold-bright);text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between;">
-                <span>Live Gold &amp; Macro Wire Headlines (Reuters · Dow Jones · TradingView)</span>
-                <span id="newsCountLabel" style="color:var(--text-2);">-- stories</span>
+            <!-- 4 Backtest KPI Cards + Saved Run Selector -->
+            <div class="bento-kpi-grid" style="margin-bottom:12px;">
+              <div class="stat-card">
+                <div class="k">Win Rate</div>
+                <div class="v" id="btWinRate" style="color:var(--buy);">--%</div>
+                <div style="font-size:10px;color:var(--text-2);" id="btWinLossCount">W/L: --</div>
               </div>
-              <div class="news-list" id="newsList">
-                <div style="color:var(--text-2);font-size:12px;padding:12px;">Loading live Gold &amp; Macro news stories...</div>
+              <div class="stat-card">
+                <div class="k">Net Profit</div>
+                <div class="v" id="btNetPnl">--</div>
+                <div style="font-size:10px;color:var(--text-2);" id="btTotalTrades">Trades: --</div>
+              </div>
+              <div class="stat-card">
+                <div class="k">Profit Factor</div>
+                <div class="v" id="btProfitFactor">--</div>
+                <div style="font-size:10px;color:var(--text-2);" id="btExpectancy">Exp: --</div>
+              </div>
+              <div class="stat-card">
+                <div class="k">Max Drawdown</div>
+                <div class="v" id="btMaxDD" style="color:var(--sell);">--</div>
+                <div style="font-size:10px;color:var(--text-2);" id="btAvgWinLoss">Avg W/L: --</div>
               </div>
             </div>
-          </div>
-        </section>
 
-        <!-- ================================================================
-             SECTION 7: DEEP HISTORICAL BACKTEST ENGINE & SUPABASE LEDGER
-             ================================================================ -->
-        <section class="workspace-section card" data-section="overview backtesting terminal bots risk">
-          <div class="card-header">
-            <div class="card-title">
-              Deep Historical Backtest Engine &amp; Supabase PostgreSQL Signal Ledger
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-              <select id="btStrategySelect" class="ctrl-select">
-                <option value="ALL" selected>All Strategies (Style-Matched)</option>
-                <option value="SWING_GOLDEN_POCKET">Swing Golden Pocket (Fib + EMA)</option>
-                <option value="PRO_TREND_PULLBACK">Pro Trend EMA Pullback</option>
-                <option value="LIQUIDITY_SWEEP_REVERSAL">Bollinger + RSI Liquidity Sweep</option>
-                <option value="MOMENTUM_BREAKOUT">Structure Momentum Breakout</option>
-              </select>
-              <select id="btHorizonSelect" class="ctrl-select" title="Historical Lookback Horizon">
-                <option value="300">Fast Scan (~300 Bars)</option>
-                <option value="7d">Last 7 Days (Deep Walk-Forward)</option>
-                <option value="30d" selected>Last 30 Days (1 Month Deep)</option>
-                <option value="90d">Last 90 Days (3 Months Deep)</option>
-                <option value="1y">Last 1 Year (Full Regime Test)</option>
-              </select>
-              <label style="font-size:11px;color:var(--text-1);display:inline-flex;align-items:center;gap:4px;">
-                SL ATR:
-                <input type="number" id="btSlInput" value="1.5" step="0.1" min="0.5" max="4.0" style="width:54px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:4px 6px;border-radius:6px;font-size:11px;" />
-              </label>
-              <label style="font-size:11px;color:var(--text-1);display:inline-flex;align-items:center;gap:4px;">
-                TP1 ATR:
-                <input type="number" id="btTp1Input" value="2.5" step="0.1" min="0.8" max="6.0" style="width:54px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:4px 6px;border-radius:6px;font-size:11px;" />
-              </label>
-              <label style="font-size:11px;color:var(--text-1);display:inline-flex;align-items:center;gap:4px;">
-                TP2 ATR:
-                <input type="number" id="btTp2Input" value="4.0" step="0.1" min="1.0" max="10.0" style="width:54px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:4px 6px;border-radius:6px;font-size:11px;" />
-              </label>
-              <button class="btn primary" id="runBacktestBtn">Run Deep Backtest &amp; Save to DB</button>
-            </div>
-          </div>
-
-          <div class="bt-stats-grid">
-            <div class="stat-card">
-              <div class="k">Win Rate (TP1/TP2)</div>
-              <div class="v" id="btWinRate" style="color:var(--buy);">--%</div>
-              <div style="font-size:10.5px;color:var(--text-2);margin-top:2px;" id="btWinLossCount">W: -- / L: --</div>
-            </div>
-            <div class="stat-card">
-              <div class="k">Net Profit (Points)</div>
-              <div class="v" id="btNetPnl">--</div>
-              <div style="font-size:10.5px;color:var(--text-2);margin-top:2px;" id="btTotalTrades">Trades: --</div>
-            </div>
-            <div class="stat-card">
-              <div class="k">Profit Factor</div>
-              <div class="v" id="btProfitFactor">--</div>
-              <div style="font-size:10.5px;color:var(--text-2);margin-top:2px;" id="btExpectancy">Expectancy: -- pts</div>
-            </div>
-            <div class="stat-card">
-              <div class="k">Max Drawdown</div>
-              <div class="v" id="btMaxDD" style="color:var(--sell);">--</div>
-              <div style="font-size:10.5px;color:var(--text-2);margin-top:2px;" id="btAvgWinLoss">Avg W/L: -- / --</div>
-            </div>
-            <div class="stat-card" style="grid-column: span 2;">
-              <div class="k">Saved Backtest Runs in Supabase (`backtest_runs`)</div>
-              <select id="savedRunsSelect" class="ctrl-select" style="width:100%;margin-top:4px;">
+            <div style="margin-bottom:12px;">
+              <select id="savedRunsSelect" class="ctrl-select" style="width:100%;">
                 <option value="">Loading saved runs...</option>
               </select>
             </div>
-          </div>
 
-          <!-- Equity Curve + Win/Loss Visual Breakdown -->
-          <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:16px;">
-            <div class="chart-wrap" style="padding:10px;">
-              <div style="font-size:11px;color:var(--text-1);margin-bottom:6px;display:flex;justify-content:space-between;">
-                <span><strong>Backtest Cumulative Equity Curve (XAU/USD Points)</strong></span>
-                <span id="eqCurveSubtitle" style="color:var(--gold-bright);">Run #--</span>
-              </div>
-              <canvas id="equityCanvas" class="eq-canvas"></canvas>
-            </div>
-            <div class="chart-wrap" style="padding:14px;display:flex;flex-direction:column;justify-content:space-between;">
-              <div>
-                <div style="font-size:11px;font-weight:700;color:var(--text-1);text-transform:uppercase;margin-bottom:8px;">
-                  Win vs Loss Outcome Breakdown
+            <!-- Equity Curve + Win/Loss Bar -->
+            <div class="split-grid" style="margin-bottom:14px;">
+              <div class="chart-wrap" style="padding:10px;">
+                <div style="font-size:10.5px;color:var(--text-2);margin-bottom:4px;display:flex;justify-content:space-between;">
+                  <span>Cumulative Equity Curve (Points)</span>
+                  <span id="eqCurveSubtitle" style="color:var(--gold-bright);">Run #--</span>
                 </div>
-                <div id="winLossBarWrap" style="margin-bottom:12px;">
-                  <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:4px;">
-                    <span id="wlWinLabel" style="color:var(--buy);">Wins: 0 (0%)</span>
-                    <span id="wlLossLabel" style="color:var(--sell);">Losses: 0 (0%)</span>
-                  </div>
-                  <div style="height:12px;background:var(--bg-2);border-radius:99px;overflow:hidden;display:flex;">
-                    <div id="wlWinBar" style="width:50%;background:var(--buy);transition:width 0.3s;"></div>
-                    <div id="wlLossBar" style="width:50%;background:var(--sell);transition:width 0.3s;"></div>
-                  </div>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:11.5px;">
-                  <div style="background:var(--bg-2);padding:8px;border-radius:6px;border:1px solid var(--border);">
-                    <div style="color:var(--text-2);font-size:10px;">TP2 RUNNERS</div>
-                    <div id="wlTp2Count" class="tabular" style="font-weight:800;font-size:14px;color:var(--buy);margin-top:2px;">0</div>
-                  </div>
-                  <div style="background:var(--bg-2);padding:8px;border-radius:6px;border:1px solid var(--border);">
-                    <div style="color:var(--text-2);font-size:10px;">TP1 + BE WINS</div>
-                    <div id="wlTp1Count" class="tabular" style="font-weight:800;font-size:14px;color:var(--blue);margin-top:2px;">0</div>
-                  </div>
-                  <div style="background:var(--bg-2);padding:8px;border-radius:6px;border:1px solid var(--border);">
-                    <div style="color:var(--text-2);font-size:10px;">STOPPED OUT</div>
-                    <div id="wlSlCount" class="tabular" style="font-weight:800;font-size:14px;color:var(--sell);margin-top:2px;">0</div>
-                  </div>
-                </div>
+                <canvas id="equityCanvas" class="eq-canvas"></canvas>
               </div>
-              <div style="font-size:11px;color:var(--text-2);border-top:1px solid var(--border);padding-top:8px;">
-                <strong>Execution Rule:</strong> 50% closed at TP1 with Stop Loss moved to Break-Even; remaining 50% trails to TP2.
-              </div>
-            </div>
-          </div>
 
-          <!-- Trade Log & Forward-Tested Live Signals -->
-          <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:16px;">
-            <div>
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
-                <div style="font-size:11.5px;font-weight:700;color:var(--text-1);text-transform:uppercase;">
-                  Backtest Trade Ledger (`backtest_trades`)
+              <div class="chart-wrap" style="padding:12px;display:flex;flex-direction:column;justify-content:center;gap:10px;">
+                <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;">
+                  <span id="wlWinLabel" style="color:var(--buy);">Wins: 0</span>
+                  <span id="wlLossLabel" style="color:var(--sell);">Losses: 0</span>
                 </div>
-                <div style="display:flex;gap:6px;">
-                  <select id="filterDirSelect" class="ctrl-select" style="padding:3px 8px;font-size:11px;">
-                    <option value="ALL">Dir: ALL</option>
-                    <option value="BUY">BUY Only</option>
-                    <option value="SELL">SELL Only</option>
-                  </select>
-                  <select id="filterOutSelect" class="ctrl-select" style="padding:3px 8px;font-size:11px;">
-                    <option value="ALL">Outcome: ALL</option>
-                    <option value="WIN">WINS Only</option>
-                    <option value="LOSS">LOSSES Only</option>
-                  </select>
+                <div style="height:10px;background:var(--bg-2);border-radius:99px;overflow:hidden;display:flex;">
+                  <div id="wlWinBar" style="width:50%;background:var(--buy);"></div>
+                  <div id="wlLossBar" style="width:50%;background:var(--sell);"></div>
                 </div>
-              </div>
-              <div class="scroll-table">
-                <table class="bt-table">
-                  <thead>
-                    <tr>
-                      <th>Entry → Exit (UTC+7)</th>
-                      <th>Dir</th>
-                      <th>Strategy</th>
-                      <th>Entry / Exit</th>
-                      <th>SL / TP1</th>
-                      <th>Outcome</th>
-                      <th>P&amp;L</th>
-                    </tr>
-                  </thead>
-                  <tbody id="btTradesBody">
-                    <tr><td colspan="7" style="text-align:center;color:var(--text-2);padding:16px;">No backtest trades loaded.</td></tr>
-                  </tbody>
-                </table>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
+                  <div class="stat-card">
+                    <div class="k">TP2</div>
+                    <div id="wlTp2Count" class="v" style="color:var(--buy);">0</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="k">TP1 + BE</div>
+                    <div id="wlTp1Count" class="v" style="color:var(--blue);">0</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="k">SL Loss</div>
+                    <div id="wlSlCount" class="v" style="color:var(--sell);">0</div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div>
-              <div style="font-size:11.5px;font-weight:700;color:var(--text-1);margin-bottom:8px;text-transform:uppercase;">
-                Live Forward-Tested Signals (`live_signals` · AI Vetted)
+            <!-- Tabbed Ledger (Eliminates Side-by-Side Table Overflow) -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+              <div class="tab-group">
+                <button class="tab-btn active" id="tabBtTradesBtn">Backtest Trades</button>
+                <button class="tab-btn" id="tabLiveLedgerBtn">Live Signals Ledger</button>
               </div>
-              <div class="scroll-table">
-                <table class="bt-table">
-                  <thead>
-                    <tr>
-                      <th>Recorded (UTC+7)</th>
-                      <th>Style/TF</th>
-                      <th>Dir</th>
-                      <th>Entry</th>
-                      <th>SL / TP1</th>
-                      <th>AI Gate</th>
-                      <th>Status / P&amp;L</th>
-                    </tr>
-                  </thead>
-                  <tbody id="liveSignalsBody">
-                    <tr><td colspan="7" style="text-align:center;color:var(--text-2);padding:16px;">No live signals recorded yet.</td></tr>
-                  </tbody>
-                </table>
+              <div style="display:flex;gap:6px;" id="btFilterControls">
+                <select id="filterDirSelect" class="ctrl-select">
+                  <option value="ALL">Dir: ALL</option>
+                  <option value="BUY">BUY</option>
+                  <option value="SELL">SELL</option>
+                </select>
+                <select id="filterOutSelect" class="ctrl-select">
+                  <option value="ALL">Outcome: ALL</option>
+                  <option value="WIN">WINS</option>
+                  <option value="LOSS">LOSSES</option>
+                </select>
               </div>
             </div>
+
+            <div id="btTradesPane" class="table-scroll-wrap" style="max-height:320px;overflow-y:auto;">
+              <table class="bt-table">
+                <thead>
+                  <tr>
+                    <th>Entry → Exit (UTC+7)</th>
+                    <th>Dir</th>
+                    <th>Strategy</th>
+                    <th>Entry / Exit</th>
+                    <th>SL / TP1</th>
+                    <th>Outcome</th>
+                    <th>P&amp;L</th>
+                  </tr>
+                </thead>
+                <tbody id="btTradesBody"></tbody>
+              </table>
+            </div>
+
+            <div id="liveLedgerPane" class="table-scroll-wrap" style="max-height:320px;overflow-y:auto;display:none;">
+              <table class="bt-table">
+                <thead>
+                  <tr>
+                    <th>Time (UTC+7)</th>
+                    <th>Style / TF</th>
+                    <th>Dir</th>
+                    <th>Entry</th>
+                    <th>SL / TP1</th>
+                    <th>AI Gate</th>
+                    <th>Status / P&amp;L</th>
+                  </tr>
+                </thead>
+                <tbody id="liveSignalsBody"></tbody>
+              </table>
+            </div>
           </div>
-        </section>
+        </div>
 
         <!-- ================================================================
-             SECTION 8: RISK GOVERNANCE & FEATURE FLAGS ARCHITECTURE PANEL
+             VIEW 6: TELEGRAM BOT HUB (`@this_is_ai_signal_bot`)
              ================================================================ -->
-        <section class="workspace-section card" data-section="risk">
-          <div class="card-header">
-            <div class="card-title">
-              🛡️ Platform Architecture, Feature Flags &amp; Data Source Contracts (Nuxt 4)
+        <div class="workspace-view hidden-view" id="view-telegram" data-view="telegram">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🤖 Telegram Signal Hub (`@this_is_ai_signal_bot`)</div>
+              <span id="tgBotStatusBadge" class="pill BUY">Checking...</span>
             </div>
-            <span class="mode-safety-pill live-lock">MODULAR SERVICE LAYER</span>
-          </div>
-          <div id="featureFlagsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;">
-            <!-- Populated dynamically by renderFeatureFlagsPanel() -->
-          </div>
-        </section>
 
+            <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                <div>
+                  <span style="color:var(--text-2);font-size:11px;">Bot Link:</span>
+                  <a href="https://t.me/this_is_ai_signal_bot" target="_blank" id="tgBotLink" style="color:var(--blue);font-weight:700;text-decoration:none;margin-left:4px;">@this_is_ai_signal_bot ↗</a>
+                </div>
+                <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11.5px;font-weight:700;color:var(--gold-bright);">
+                  <input type="checkbox" id="tgAutoNotifyChk" checked />
+                  24/7 Auto-Push Signals
+                </label>
+              </div>
+
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <input type="text" id="tgChatIdInput" placeholder="Chat ID (e.g. -5523180993) or send /start in Telegram" style="flex:1;min-width:180px;background:var(--bg-1);border:1px solid var(--border);color:var(--text-0);padding:7px 10px;border-radius:7px;font-size:11.5px;" />
+                <button class="btn" id="tgSyncBtn">Sync `/start`</button>
+                <button class="btn primary" id="tgSendNowBtn">Broadcast Signal</button>
+              </div>
+            </div>
+
+            <div class="equal-grid">
+              <div>
+                <div style="font-size:10px;font-weight:700;color:var(--gold-bright);text-transform:uppercase;margin-bottom:6px;">
+                  Subscribed Chats (<span id="tgSubCount">0</span>)
+                </div>
+                <div id="tgSubscribersList" style="height:220px;overflow-y:auto;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;"></div>
+              </div>
+              <div>
+                <div style="font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;margin-bottom:6px;">
+                  Recent Deliveries
+                </div>
+                <div id="tgLogsList" style="height:220px;overflow-y:auto;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================
+             VIEW 7: SETTINGS, PRICE ALERTS & FEATURE FLAGS
+             ================================================================ -->
+        <div class="workspace-view hidden-view" id="view-settings" data-view="settings">
+          <div class="equal-grid">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">🔑 Cloud AI Key (`gemini-4-argon`)</div>
+                <span class="mode-safety-pill paper-sim">OPTIONAL</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="password" id="geminiKeyInput" placeholder="Enter GEMINI_API_KEY (AIza...)" style="flex:1;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:7px 10px;border-radius:7px;font-size:11.5px;" />
+                <button class="btn primary" id="saveGeminiKeyBtn">Save Key</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">🔔 Custom Price Alert</div>
+                <span id="activeAlertStatus" style="font-size:10.5px;color:var(--text-2);">Inactive</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="number" id="alertPriceInput" placeholder="Target XAU/USD Price ($)" step="0.5" style="flex:1;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:7px 10px;border-radius:7px;font-size:11.5px;font-family:var(--font-mono);" />
+                <button class="btn" id="setAlertBtn">Set Alert</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">🛡️ Platform Modules &amp; Data Contracts</div>
+              <span class="mode-safety-pill live-lock">NUXT 4 SERVICE LAYER</span>
+            </div>
+            <div id="featureFlagsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       ACTION CONFIRMATION DIALOG MODAL
+       ====================================================================== -->
+  <div class="confirm-modal-backdrop" id="confirmActionModal" role="dialog" aria-modal="true">
+    <div class="confirm-modal">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-size:14px;font-weight:800;color:var(--text-0);" id="confirmModalTitle">Confirm Action</div>
+        <span class="mode-safety-pill paper-sim" id="confirmModalBadge">CONFIRM</span>
+      </div>
+      <div style="font-size:12px;color:var(--text-1);" id="confirmModalDesc">Are you sure you want to proceed?</div>
+      <div class="confirm-meta-box" id="confirmModalMeta"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button class="btn" id="confirmModalCancelBtn">Cancel (Esc)</button>
+        <button class="btn primary" id="confirmModalOkBtn">Confirm Action ↵</button>
       </div>
     </div>
   </div>
@@ -951,13 +860,13 @@
   <!-- ======================================================================
        GLOBAL COMMAND PALETTE MODAL (⌘K / Ctrl+K)
        ====================================================================== -->
-  <div class="cmd-modal-backdrop" id="cmdPaletteModal" role="dialog" aria-modal="true" aria-label="Command Palette">
+  <div class="cmd-modal-backdrop" id="cmdPaletteModal" role="dialog" aria-modal="true">
     <div class="cmd-modal">
       <input
         type="text"
         class="cmd-input"
         id="cmdPaletteInput"
-        placeholder="Type a command or search (e.g. 'Swing', 'Terminal', 'Backtest', 'Telegram', 'Theme')..."
+        placeholder="Jump to view or run action (e.g. 'Terminal', 'Backtest', 'Telegram', 'Swing')..."
       />
       <div class="cmd-list" id="cmdPaletteList"></div>
     </div>
