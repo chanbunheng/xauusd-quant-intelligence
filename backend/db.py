@@ -129,7 +129,13 @@ def init_db():
                 max_drawdown_pts REAL NOT NULL,
                 expectancy_pts REAL NOT NULL,
                 avg_win REAL NOT NULL,
-                avg_loss REAL NOT NULL
+                avg_loss REAL NOT NULL,
+                risk_usd REAL DEFAULT 10.0,
+                net_pnl_usd REAL DEFAULT 0.0,
+                max_drawdown_usd REAL DEFAULT 0.0,
+                expectancy_usd REAL DEFAULT 0.0,
+                avg_win_usd REAL DEFAULT 0.0,
+                avg_loss_usd REAL DEFAULT 0.0
             );
 
             CREATE TABLE IF NOT EXISTS backtest_trades (
@@ -150,6 +156,9 @@ def init_db():
                 outcome TEXT NOT NULL,
                 pnl_pts REAL NOT NULL,
                 cum_pnl_pts REAL NOT NULL,
+                lot_size REAL DEFAULT 0.01,
+                pnl_usd REAL DEFAULT 0.0,
+                cum_pnl_usd REAL DEFAULT 0.0,
                 rationale TEXT,
                 FOREIGN KEY(run_id) REFERENCES backtest_runs(id)
             );
@@ -450,6 +459,12 @@ def save_backtest_run(summary, trades):
                     "expectancy_pts": summary["expectancy_pts"],
                     "avg_win": summary["avg_win"],
                     "avg_loss": summary["avg_loss"],
+                    "risk_usd": summary.get("risk_usd", 10.0),
+                    "net_pnl_usd": summary.get("net_pnl_usd", 0.0),
+                    "max_drawdown_usd": summary.get("max_drawdown_usd", 0.0),
+                    "expectancy_usd": summary.get("expectancy_usd", 0.0),
+                    "avg_win_usd": summary.get("avg_win_usd", 0.0),
+                    "avg_loss_usd": summary.get("avg_loss_usd", 0.0),
                 },
                 prefer="return=representation",
             )
@@ -474,6 +489,9 @@ def save_backtest_run(summary, trades):
                             "outcome": t["outcome"],
                             "pnl_pts": t["pnl"],
                             "cum_pnl_pts": t["cum_pnl"],
+                            "lot_size": t.get("lot_size", 0.01),
+                            "pnl_usd": t.get("pnl_usd", 0.0),
+                            "cum_pnl_usd": t.get("cum_pnl_usd", 0.0),
                             "rationale": t.get("rationale", ""),
                         }
                         for t in trades
@@ -495,8 +513,9 @@ def save_backtest_run(summary, trades):
                 created_at, symbol, timeframe, trading_style, strategy_mode, bars_tested,
                 sl_atr_mult, tp1_atr_mult, tp2_atr_mult,
                 total_trades, wins, losses, win_rate, net_pnl_pts,
-                profit_factor, max_drawdown_pts, expectancy_pts, avg_win, avg_loss
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                profit_factor, max_drawdown_pts, expectancy_pts, avg_win, avg_loss,
+                risk_usd, net_pnl_usd, max_drawdown_usd, expectancy_usd, avg_win_usd, avg_loss_usd
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 summary["created_at"],
@@ -518,6 +537,12 @@ def save_backtest_run(summary, trades):
                 summary["expectancy_pts"],
                 summary["avg_win"],
                 summary["avg_loss"],
+                summary.get("risk_usd", 10.0),
+                summary.get("net_pnl_usd", 0.0),
+                summary.get("max_drawdown_usd", 0.0),
+                summary.get("expectancy_usd", 0.0),
+                summary.get("avg_win_usd", 0.0),
+                summary.get("avg_loss_usd", 0.0),
             ),
         )
         local_run_id = cur.lastrowid
@@ -529,8 +554,8 @@ def save_backtest_run(summary, trades):
                     run_id, symbol, timeframe, entry_time, exit_time,
                     direction, signal_type, confidence,
                     entry_price, sl_price, tp1_price, tp2_price, exit_price,
-                    outcome, pnl_pts, cum_pnl_pts, rationale
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    outcome, pnl_pts, cum_pnl_pts, lot_size, pnl_usd, cum_pnl_usd, rationale
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     local_run_id,
@@ -549,6 +574,9 @@ def save_backtest_run(summary, trades):
                     t["outcome"],
                     t["pnl"],
                     t["cum_pnl"],
+                    t.get("lot_size", 0.01),
+                    t.get("pnl_usd", 0.0),
+                    t.get("cum_pnl_usd", 0.0),
                     t.get("rationale", ""),
                 ),
             )
@@ -612,7 +640,7 @@ def get_backtest_run_details(run_id=None, direction_filter=None, outcome_filter=
                         "GET",
                         "backtest_trades",
                         params={
-                            "select": "id,entry_time,exit_time,pnl_pts,cum_pnl_pts,outcome",
+                            "select": "id,entry_time,exit_time,pnl_pts,cum_pnl_pts,pnl_usd,cum_pnl_usd,lot_size,outcome",
                             "run_id": f"eq.{run_dict['id']}",
                             "order": "id.asc",
                         },
@@ -648,7 +676,7 @@ def get_backtest_run_details(run_id=None, direction_filter=None, outcome_filter=
 
         trades = [dict(r) for r in conn.execute(query, params).fetchall()]
         eq_rows = conn.execute(
-            "SELECT id, entry_time, exit_time, pnl_pts, cum_pnl_pts, outcome FROM backtest_trades WHERE run_id = ? ORDER BY id ASC",
+            "SELECT id, entry_time, exit_time, pnl_pts, cum_pnl_pts, pnl_usd, cum_pnl_usd, lot_size, outcome FROM backtest_trades WHERE run_id = ? ORDER BY id ASC",
             (run_dict["id"],),
         ).fetchall()
         run_dict["trades"] = trades

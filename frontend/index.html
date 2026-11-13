@@ -480,12 +480,18 @@
 
               <div style="display:flex;flex-direction:column;gap:8px;font-size:11px;">
                 <div>
-                  <label style="color:var(--text-2);font-size:10px;font-weight:700;">ACCOUNT EQUITY ($)</label>
-                  <input type="number" id="riskAccountInput" value="10000" step="500" style="width:100%;margin-top:3px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:6px 9px;border-radius:6px;font-family:var(--font-mono);" />
+                  <label style="color:var(--text-2);font-size:10px;font-weight:700;">FIXED RISK PER TRADE ($ USD)</label>
+                  <input type="number" id="riskUsdInput" value="10" step="1" min="1" style="width:100%;margin-top:3px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:6px 9px;border-radius:6px;font-family:var(--font-mono);" />
                 </div>
-                <div>
-                  <label style="color:var(--text-2);font-size:10px;font-weight:700;">RISK PER TRADE (%)</label>
-                  <input type="number" id="riskPctInput" value="1.0" step="0.25" min="0.1" max="5" style="width:100%;margin-top:3px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:6px 9px;border-radius:6px;font-family:var(--font-mono);" />
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                  <div>
+                    <label style="color:var(--text-2);font-size:10px;font-weight:700;">EQUITY ($)</label>
+                    <input type="number" id="riskAccountInput" value="10000" step="500" style="width:100%;margin-top:3px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:6px 9px;border-radius:6px;font-family:var(--font-mono);" />
+                  </div>
+                  <div>
+                    <label style="color:var(--text-2);font-size:10px;font-weight:700;">RISK (%)</label>
+                    <input type="number" id="riskPctInput" value="1.0" step="0.25" min="0.1" max="5" style="width:100%;margin-top:3px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:6px 9px;border-radius:6px;font-family:var(--font-mono);" />
+                  </div>
                 </div>
               </div>
 
@@ -669,6 +675,7 @@
                   <option value="TP1_ONLY" selected>Exit: 100% TP1 (No BE)</option>
                   <option value="BE_RUNNER">Exit: 50% TP1 + BE → TP2</option>
                 </select>
+                <label style="font-size:10.5px;color:var(--text-2);">Risk $ <input type="number" id="btRiskUsdInput" value="10" min="1" step="1" style="width:48px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:3px 5px;border-radius:5px;font-size:10.5px;" /></label>
                 <label style="font-size:10.5px;color:var(--text-2);">SL <input type="number" id="btSlInput" value="1.5" step="0.1" style="width:46px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:3px 5px;border-radius:5px;font-size:10.5px;" /></label>
                 <label style="font-size:10.5px;color:var(--text-2);">TP1 <input type="number" id="btTp1Input" value="2.5" step="0.1" style="width:46px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:3px 5px;border-radius:5px;font-size:10.5px;" /></label>
                 <label style="font-size:10.5px;color:var(--text-2);">TP2 <input type="number" id="btTp2Input" value="4.0" step="0.1" style="width:46px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:3px 5px;border-radius:5px;font-size:10.5px;" /></label>
@@ -711,7 +718,7 @@
             <div class="split-grid" style="margin-bottom:14px;">
               <div class="chart-wrap" style="padding:10px;">
                 <div style="font-size:10.5px;color:var(--text-2);margin-bottom:4px;display:flex;justify-content:space-between;">
-                  <span>Cumulative Equity Curve (Points)</span>
+                  <span>Cumulative Equity Curve ($ USD)</span>
                   <span id="eqCurveSubtitle" style="color:var(--gold-bright);">Run #--</span>
                 </div>
                 <canvas id="equityCanvas" class="eq-canvas"></canvas>
@@ -771,11 +778,12 @@
                     <th>Entry → Exit (UTC+7)</th>
                     <th>Dir</th>
                     <th>Strategy</th>
+                    <th>Lot</th>
                     <th>Entry / Exit</th>
                     <th>SL / TP1</th>
                     <th>Outcome</th>
-                    <th>Trade P&amp;L</th>
-                    <th>Total P&amp;L</th>
+                    <th>Trade P&amp;L ($)</th>
+                    <th>Total P&amp;L ($)</th>
                   </tr>
                 </thead>
                 <tbody id="btTradesBody"></tbody>

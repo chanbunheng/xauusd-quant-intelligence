@@ -362,6 +362,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 exit_rule = (body.get("exit_rule") or saved_cfg.get("exit_rule") or "TP1_ONLY").upper()
                 if exit_rule not in ("TP1_ONLY", "BE_RUNNER"):
                     exit_rule = "TP1_ONLY"
+                risk_usd = max(1.0, float(body.get("risk_usd", saved_cfg.get("risk_usd", 10.0))))
                 bars_tested = int(body.get("bars_tested", 450))
                 sl_mult = float(body.get("sl_mult", style_cfg["sl_mult"]))
                 tp1_mult = float(body.get("tp1_mult", style_cfg["tp1_mult"]))
@@ -379,6 +380,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     start_date=start_date,
                     end_date=end_date,
                     exit_rule=exit_rule,
+                    risk_usd=risk_usd,
                     sl_mult=sl_mult,
                     tp1_mult=tp1_mult,
                     tp2_mult=tp2_mult,
@@ -474,6 +476,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     "saved_min_conf": lambda v: str(int(float(v))),
                     "saved_account_balance": lambda v: str(round(float(v), 2)),
                     "saved_risk_pct": lambda v: str(round(float(v), 2)),
+                    "saved_risk_usd": lambda v: str(max(1.0, round(float(v), 2))),
                 }
                 updated_any = False
                 for k, validator in trading_keys.items():

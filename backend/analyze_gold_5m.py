@@ -1939,8 +1939,40 @@ def get_saved_trading_config():
         "min_confidence": int(_flt("saved_min_conf", 70)),
         "account_balance": _flt("saved_account_balance", 10000.0),
         "risk_pct": _flt("saved_risk_pct", 1.0),
+        "risk_usd": max(1.0, _flt("saved_risk_usd", 10.0)),
         "updated_at": s.get("saved_config_updated_at", ""),
     }
+
+
+ASSET_CONTRACT_SIZE = {
+    "OANDA:XAUUSD": 100.0,
+    "OANDA:XAGUSD": 5000.0,
+    "OANDA:EURUSD": 100000.0,
+    "OANDA:GBPUSD": 100000.0,
+    "OANDA:USDJPY": 667.0,
+    "OANDA:SPX500USD": 1.0,
+    "OANDA:NAS100USD": 1.0,
+    "BINANCE:BTCUSDT": 1.0,
+    "BINANCE:ETHUSDT": 1.0,
+    "BINANCE:SOLUSDT": 1.0,
+    "NASDAQ:NVDA": 1.0,
+    "NASDAQ:AAPL": 1.0,
+}
+
+
+def calculate_lot_and_usd_pnl(symbol, entry, sl, exit_price, direction, risk_usd=10.0, dec=2):
+    """
+    Sizes each position dynamically from minimum 0.01 lot (step 0.01) so that
+    a Stop-Loss hit targets `risk_usd` (default $10.00). Returns (lot_size, pnl_pts, pnl_usd).
+    """
+    contract = ASSET_CONTRACT_SIZE.get(symbol, 1.0)
+    sl_dist = abs(entry - sl)
+    raw_lot = (float(risk_usd) / (sl_dist * contract)) if sl_dist > 0 else 0.01
+    lot_size = max(0.01, round(raw_lot, 2))
+    pnl_pts = (exit_price - entry) if direction == "BUY" else (entry - exit_price)
+    pnl_pts = round(pnl_pts, dec)
+    pnl_usd = round(pnl_pts * lot_size * contract, 2)
+    return lot_size, pnl_pts, pnl_usd
 
 
 def run_and_store_backtest(
@@ -1954,6 +1986,7 @@ def run_and_store_backtest(
     start_date=None,
     end_date=None,
     exit_rule="TP1_ONLY",
+    risk_usd=10.0,
     sl_mult=None,
     tp1_mult=None,
     tp2_mult=None,
@@ -2072,6 +2105,10 @@ def run_and_store_backtest(
     cum_pnl = 0.0
     peak_pnl = 0.0
     max_dd = 0.0
+    cum_pnl_usd = 0.0
+    peak_pnl_usd = 0.0
+    max_dd_usd = 0.0
+    risk_usd = max(1.0, float(risk_usd or 10.0))
     max_hold = style_cfg["max_hold_bars"]
 
     while i < n - 3:
@@ -2203,11 +2240,15 @@ def run_and_store_backtest(
             exit_time = candles[exit_idx]["time_local"]
 
         if outcome is not None:
-            pnl = (exit_price - entry) if direction == "BUY" else (entry - exit_price)
-            pnl = round(pnl, dec)
+            lot_size, pnl, pnl_usd = calculate_lot_and_usd_pnl(
+                symbol, entry, sl, exit_price, direction, risk_usd=risk_usd, dec=dec
+            )
             cum_pnl = round(cum_pnl + pnl, dec)
             peak_pnl = max(peak_pnl, cum_pnl)
             max_dd = max(max_dd, round(peak_pnl - cum_pnl, dec))
+            cum_pnl_usd = round(cum_pnl_usd + pnl_usd, 2)
+            peak_pnl_usd = max(peak_pnl_usd, cum_pnl_usd)
+            max_dd_usd = max(max_dd_usd, round(peak_pnl_usd - cum_pnl_usd, 2))
             trades.append(
                 {
                     "trade_no": len(trades) + 1,
@@ -2222,8 +2263,11 @@ def run_and_store_backtest(
                     "tp2": tp2,
                     "exit": round(exit_price, dec),
                     "outcome": outcome,
+                    "lot_size": lot_size,
                     "pnl": pnl,
                     "cum_pnl": cum_pnl,
+                    "pnl_usd": pnl_usd,
+                    "cum_pnl_usd": cum_pnl_usd,
                     "rationale": sig["rationale"],
                 }
             )
@@ -2233,16 +2277,23 @@ def run_and_store_backtest(
 
     wins_list = [t["pnl"] for t in trades if t["outcome"].startswith("WIN")]
     loss_list = [abs(t["pnl"]) for t in trades if t["outcome"].startswith("LOSS")]
+    wins_usd_list = [t["pnl_usd"] for t in trades if t["outcome"].startswith("WIN")]
+    loss_usd_list = [abs(t["pnl_usd"]) for t in trades if t["outcome"].startswith("LOSS")]
     wins = len(wins_list)
     losses = len(loss_list)
     total = wins + losses
     win_rate = round((wins / total) * 100, 1) if total > 0 else 0.0
     gross_win = sum(wins_list)
     gross_loss = sum(loss_list)
-    profit_factor = round(gross_win / gross_loss, 2) if gross_loss > 0 else (99.0 if gross_win > 0 else 0.0)
+    gross_win_usd = sum(wins_usd_list)
+    gross_loss_usd = sum(loss_usd_list)
+    profit_factor = round(gross_win_usd / gross_loss_usd, 2) if gross_loss_usd > 0 else (99.0 if gross_win_usd > 0 else 0.0)
     avg_win = round(gross_win / wins, dec) if wins > 0 else 0.0
     avg_loss = round(gross_loss / losses, dec) if losses > 0 else 0.0
     expectancy = round(cum_pnl / total, dec) if total > 0 else 0.0
+    avg_win_usd = round(gross_win_usd / wins, 2) if wins > 0 else 0.0
+    avg_loss_usd = round(gross_loss_usd / losses, 2) if losses > 0 else 0.0
+    expectancy_usd = round(cum_pnl_usd / total, 2) if total > 0 else 0.0
 
     span_str = ""
     if candles:
@@ -2281,6 +2332,12 @@ def run_and_store_backtest(
         "expectancy_pts": expectancy,
         "avg_win": avg_win,
         "avg_loss": avg_loss,
+        "risk_usd": risk_usd,
+        "net_pnl_usd": round(cum_pnl_usd, 2),
+        "max_drawdown_usd": round(max_dd_usd, 2),
+        "expectancy_usd": expectancy_usd,
+        "avg_win_usd": avg_win_usd,
+        "avg_loss_usd": avg_loss_usd,
         "date_span": span_str,
     }
 

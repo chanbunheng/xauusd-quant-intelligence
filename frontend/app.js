@@ -51,6 +51,22 @@ let currentSlMult = 1.5;
 let currentTp1Mult = 2.5;
 let currentTp2Mult = 4.0;
 let currentMinConf = 70;
+let currentRiskUsd = 10.0;
+
+const ASSET_CONTRACT_SIZE_MAP = {
+  "OANDA:XAUUSD": 100.0,
+  "OANDA:XAGUSD": 5000.0,
+  "OANDA:EURUSD": 100000.0,
+  "OANDA:GBPUSD": 100000.0,
+  "OANDA:USDJPY": 667.0,
+  "OANDA:SPX500USD": 1.0,
+  "OANDA:NAS100USD": 1.0,
+  "BINANCE:BTCUSDT": 1.0,
+  "BINANCE:ETHUSDT": 1.0,
+  "BINANCE:SOLUSDT": 1.0,
+  "NASDAQ:NVDA": 1.0,
+  "NASDAQ:AAPL": 1.0
+};
 let hasLocalSavedConfig = false;
 
 let currentView = "overview";
@@ -117,6 +133,9 @@ function loadSavedConfigFromLocal() {
     if (cfg.tp1_mult) currentTp1Mult = parseFloat(cfg.tp1_mult) || STYLE_DEFAULTS[currentStyle].tp1;
     if (cfg.tp2_mult) currentTp2Mult = parseFloat(cfg.tp2_mult) || STYLE_DEFAULTS[currentStyle].tp2;
     if (cfg.min_confidence) currentMinConf = parseInt(cfg.min_confidence, 10) || 70;
+    if (cfg.risk_usd) currentRiskUsd = Math.max(1, parseFloat(cfg.risk_usd) || 10.0);
+    if (el("riskUsdInput")) el("riskUsdInput").value = currentRiskUsd;
+    if (el("btRiskUsdInput")) el("btRiskUsdInput").value = currentRiskUsd;
     if (cfg.account_balance && el("riskAccountInput")) el("riskAccountInput").value = cfg.account_balance;
     if (cfg.risk_pct && el("riskPctInput")) el("riskPctInput").value = cfg.risk_pct;
     hasLocalSavedConfig = true;
@@ -137,6 +156,7 @@ function persistConfigToLocal() {
       tp1_mult: currentTp1Mult,
       tp2_mult: currentTp2Mult,
       min_confidence: currentMinConf,
+      risk_usd: currentRiskUsd,
       account_balance: parseFloat(el("riskAccountInput")?.value) || 10000,
       risk_pct: parseFloat(el("riskPctInput")?.value) || 1.0,
       saved_at: new Date().toLocaleTimeString()
@@ -159,6 +179,7 @@ async function saveTradingSettingsToBackend(silent = false) {
       saved_tp1_mult: currentTp1Mult,
       saved_tp2_mult: currentTp2Mult,
       saved_min_conf: currentMinConf,
+      saved_risk_usd: currentRiskUsd,
       saved_account_balance: parseFloat(el("riskAccountInput")?.value) || 10000,
       saved_risk_pct: parseFloat(el("riskPctInput")?.value) || 1.0
     };
@@ -955,17 +976,19 @@ function renderTerminalWatchlist() {
 
 function updatePositionSizer() {
   if (!currentData) return;
-  const account = parseFloat(el("riskAccountInput")?.value) || 10000;
-  const riskPct = parseFloat(el("riskPctInput")?.value) || 1.0;
+  const riskUsd = Math.max(1, parseFloat(el("riskUsdInput")?.value) || currentRiskUsd || 10);
+  currentRiskUsd = riskUsd;
   const dec = getAssetDecimals(currentSymbol, currentData.current_price);
+  const contract = ASSET_CONTRACT_SIZE_MAP[currentSymbol] || 1.0;
 
   const entry = currentData.entry || currentData.current_price || 4748;
   const sl = currentData.stop_loss || entry * 0.995;
   const stopDist = Math.max(Math.abs(entry - sl), 0.0001);
 
-  const dollarRisk = account * (riskPct / 100);
-  const units = dollarRisk / stopDist;
-  const lots = units / 100;
+  const rawLot = riskUsd / (stopDist * contract);
+  const lots = Math.max(0.01, Math.round(rawLot * 100) / 100);
+  const units = lots * contract;
+  const actualDollarRisk = stopDist * lots * contract;
 
   if (el("ticketSymbolLbl")) el("ticketSymbolLbl").textContent = currentSymbol;
   if (el("ticketBiasLbl")) {
@@ -974,7 +997,7 @@ function updatePositionSizer() {
       currentData.direction === "BUY" ? "var(--buy)" : currentData.direction === "SELL" ? "var(--sell)" : "var(--gold-bright)";
   }
   if (el("ticketStopDistLbl")) el("ticketStopDistLbl").textContent = `${stopDist.toFixed(dec)} pts`;
-  if (el("calcDollarRisk")) el("calcDollarRisk").textContent = `$${dollarRisk.toFixed(2)}`;
+  if (el("calcDollarRisk")) el("calcDollarRisk").textContent = `$${actualDollarRisk.toFixed(2)}`;
   if (el("calcOuncesSize")) el("calcOuncesSize").textContent = `${units.toFixed(2)} units`;
   if (el("calcLotSize")) el("calcLotSize").textContent = `${lots.toFixed(2)} lots`;
 }
@@ -1225,17 +1248,25 @@ async function loadBacktestRun(runId) {
 
 function renderSelectedBacktest(bt) {
   if (!bt) return;
+  const hasUsd = bt.net_pnl_usd !== undefined && bt.net_pnl_usd !== null && (Number(bt.net_pnl_usd) !== 0 || (bt.trades || []).some((t) => Number(t.pnl_usd || 0) !== 0));
+  const netVal = hasUsd ? Number(bt.net_pnl_usd || 0) : Number(bt.net_pnl_pts || 0);
+  const expVal = hasUsd ? Number(bt.expectancy_usd || 0) : Number(bt.expectancy_pts || 0);
+  const ddVal = hasUsd ? Number(bt.max_drawdown_usd || 0) : Number(bt.max_drawdown_pts || 0);
+  const avgW = hasUsd ? Number(bt.avg_win_usd || 0) : Number(bt.avg_win || 0);
+  const avgL = hasUsd ? Number(bt.avg_loss_usd || 0) : Number(bt.avg_loss || 0);
+  const fmtMoney = (v) => (hasUsd ? `${v >= 0 ? "+" : "-"}$${Math.abs(v).toFixed(2)}` : `${v >= 0 ? "+" : ""}${v.toFixed(1)} pts`);
+
   if (el("btWinRate")) el("btWinRate").textContent = `${bt.win_rate}%`;
   if (el("btWinLossCount")) el("btWinLossCount").textContent = `${bt.wins}W / ${bt.losses}L`;
   if (el("btNetPnl")) {
-    el("btNetPnl").textContent = `${bt.net_pnl_pts >= 0 ? "+" : ""}${bt.net_pnl_pts.toFixed(1)} pts`;
-    el("btNetPnl").style.color = bt.net_pnl_pts >= 0 ? "var(--buy)" : "var(--sell)";
+    el("btNetPnl").textContent = fmtMoney(netVal);
+    el("btNetPnl").style.color = netVal >= 0 ? "var(--buy)" : "var(--sell)";
   }
-  if (el("btTotalTrades")) el("btTotalTrades").textContent = `${bt.total_trades} trades (${bt.bars_tested} bars)`;
+  if (el("btTotalTrades")) el("btTotalTrades").textContent = `${bt.total_trades} trades · $${Number(bt.risk_usd || 10).toFixed(0)} risk`;
   if (el("btProfitFactor")) el("btProfitFactor").textContent = String(bt.profit_factor);
-  if (el("btExpectancy")) el("btExpectancy").textContent = `Exp ${bt.expectancy_pts >= 0 ? "+" : ""}${bt.expectancy_pts.toFixed(2)} pts`;
-  if (el("btMaxDD")) el("btMaxDD").textContent = `-${bt.max_drawdown_pts.toFixed(1)} pts`;
-  if (el("btAvgWinLoss")) el("btAvgWinLoss").textContent = `+${bt.avg_win.toFixed(1)} / -${bt.avg_loss.toFixed(1)}`;
+  if (el("btExpectancy")) el("btExpectancy").textContent = `Exp ${fmtMoney(expVal)}`;
+  if (el("btMaxDD")) el("btMaxDD").textContent = hasUsd ? `-$${Math.abs(ddVal).toFixed(2)}` : `-${Math.abs(ddVal).toFixed(1)} pts`;
+  if (el("btAvgWinLoss")) el("btAvgWinLoss").textContent = hasUsd ? `+$${avgW.toFixed(2)} / -$${avgL.toFixed(2)}` : `+${avgW.toFixed(1)} / -${avgL.toFixed(1)}`;
   if (el("eqCurveSubtitle")) el("eqCurveSubtitle").textContent = `Run #${bt.id} (${bt.timeframe})`;
 
   const total = Math.max(bt.total_trades || 1, 1);
@@ -1264,28 +1295,35 @@ function renderSelectedBacktest(bt) {
             const sEntry = (t.entry_time || "").replace(" UTC+7", "").slice(5);
             const sExit = (t.exit_time || "").replace(" UTC+7", "").slice(11);
             const tradeNo = t.trade_no || (t.id != null && tradeNumById[t.id]) || (trades.length - idx);
-            const cumPnl = Number.isFinite(Number(t.cum_pnl_pts)) ? Number(t.cum_pnl_pts) : (Number.isFinite(Number(t.cum_pnl)) ? Number(t.cum_pnl) : 0);
-            const pnlVal = Number(t.pnl_pts ?? t.pnl ?? 0);
+            const lot = Number(t.lot_size ?? 0.01);
+            const useTradeUsd = hasUsd || Number(t.pnl_usd || 0) !== 0;
+            const pnlVal = useTradeUsd ? Number(t.pnl_usd ?? 0) : Number(t.pnl_pts ?? t.pnl ?? 0);
+            const cumPnl = useTradeUsd
+              ? Number(t.cum_pnl_usd ?? 0)
+              : (Number.isFinite(Number(t.cum_pnl_pts)) ? Number(t.cum_pnl_pts) : Number(t.cum_pnl ?? 0));
+            const pnlTxt = useTradeUsd ? `${pnlVal >= 0 ? "+" : "-"}$${Math.abs(pnlVal).toFixed(2)}` : `${pnlVal >= 0 ? "+" : ""}${pnlVal.toFixed(2)}`;
+            const cumTxt = useTradeUsd ? `${cumPnl >= 0 ? "+" : "-"}$${Math.abs(cumPnl).toFixed(2)}` : `${cumPnl >= 0 ? "+" : ""}${cumPnl.toFixed(2)}`;
             return `
               <tr>
                 <td style="font-weight:700;color:var(--text-2);">#${tradeNo}</td>
                 <td>${escapeHtml(sEntry)} → ${escapeHtml(sExit)}</td>
                 <td><span class="pill ${t.direction === "BUY" ? "BUY" : "SELL"}">${escapeHtml(t.direction)}</span></td>
                 <td>${escapeHtml(t.signal_type)}</td>
+                <td style="font-family:var(--font-mono);color:var(--gold-bright);">${lot.toFixed(2)}</td>
                 <td>$${Number(t.entry_price ?? t.entry ?? 0).toFixed(1)} → $${Number(t.exit_price ?? t.exit ?? 0).toFixed(1)}</td>
                 <td>$${Number(t.sl_price ?? t.sl ?? 0).toFixed(1)} / $${Number(t.tp1_price ?? t.tp1 ?? 0).toFixed(1)}</td>
                 <td><span class="pill ${isWin ? "BUY" : "SELL"}">${escapeHtml(t.outcome)}</span></td>
                 <td style="font-weight:800;color:${pnlVal >= 0 ? "var(--buy)" : "var(--sell)"};">
-                  ${pnlVal >= 0 ? "+" : ""}${pnlVal.toFixed(2)}
+                  ${pnlTxt}
                 </td>
                 <td style="font-weight:800;color:${cumPnl >= 0 ? "var(--buy)" : "var(--sell)"};">
-                  ${cumPnl >= 0 ? "+" : ""}${cumPnl.toFixed(2)}
+                  ${cumTxt}
                 </td>
               </tr>
             `;
           })
           .join("")
-      : `<tr><td colspan="9" style="text-align:center;color:var(--text-2);padding:14px;">No trades found.</td></tr>`;
+      : `<tr><td colspan="10" style="text-align:center;color:var(--text-2);padding:14px;">No trades found.</td></tr>`;
   }
 
   if (currentView === "backtest") drawEquityCurve(bt.equity_curve || []);
@@ -1316,7 +1354,8 @@ function drawEquityCurve(eqPoints) {
   const plotW = width - padL - padR;
   const plotH = height - padT - padB;
 
-  const vals = [0, ...eqPoints.map((p) => p.cum_pnl_pts)];
+  const hasUsdCurve = eqPoints.some((p) => Number(p.cum_pnl_usd || 0) !== 0);
+  const vals = [0, ...eqPoints.map((p) => (hasUsdCurve ? Number(p.cum_pnl_usd || 0) : Number(p.cum_pnl_pts || 0)))];
   let minV = Math.min(...vals, -2);
   let maxV = Math.max(...vals, 2);
   const span = Math.max(maxV - minV, 2);
@@ -2110,9 +2149,24 @@ function initEventListeners() {
   if (el("watchlistSearchInput")) {
     el("watchlistSearchInput").addEventListener("input", renderTerminalWatchlist);
   }
-  ["riskAccountInput", "riskPctInput"].forEach((id) => {
-    if (el(id)) el(id).addEventListener("input", updatePositionSizer);
+  ["riskUsdInput", "riskAccountInput", "riskPctInput"].forEach((id) => {
+    if (el(id)) {
+      el(id).addEventListener("input", () => {
+        if (id === "riskUsdInput" && el("btRiskUsdInput")) {
+          el("btRiskUsdInput").value = el("riskUsdInput").value;
+        }
+        updatePositionSizer();
+      });
+    }
   });
+  if (el("btRiskUsdInput")) {
+    el("btRiskUsdInput").addEventListener("input", () => {
+      const v = Math.max(1, parseFloat(el("btRiskUsdInput").value) || 10);
+      currentRiskUsd = v;
+      if (el("riskUsdInput")) el("riskUsdInput").value = v;
+      updatePositionSizer();
+    });
+  }
 
   ["simBuyBtn", "simSellBtn"].forEach((btnId) => {
     if (el(btnId)) {
@@ -2203,6 +2257,8 @@ function initEventListeners() {
       }
       const exitRule = el("btExitRuleSelect")?.value || "TP1_ONLY";
       const exitLabel = exitRule === "BE_RUNNER" ? "50% TP1 + BE → TP2" : "100% Close at TP1 (No BE)";
+      const riskUsd = Math.max(1, parseFloat(el("btRiskUsdInput")?.value) || currentRiskUsd || 10);
+      currentRiskUsd = riskUsd;
       const durCfg = DURATION_BARS_MAP[horizonKey] || DURATION_BARS_MAP["30d"];
       const sl = parseFloat(el("btSlInput")?.value) || currentSlMult;
       const tp1 = parseFloat(el("btTp1Input")?.value) || currentTp1Mult;
@@ -2214,7 +2270,7 @@ function initEventListeners() {
         title: "Run Deep Historical Backtest",
         badge: "BACKTEST",
         desc: "Execute walk-forward simulation and persist the run to Supabase PostgreSQL?",
-        meta: `Symbol: ${currentSymbol} (${currentStyle} · ${stratName} · ${currentTf})\nHorizon: ${horizonMeta}\nExit Rule: ${exitLabel}\nMultipliers: SL ${sl}x · TP1 ${tp1}x · TP2 ${tp2}x ATR`,
+        meta: `Symbol: ${currentSymbol} (${currentStyle} · ${stratName} · ${currentTf})\nHorizon: ${horizonMeta}\nExit Rule: ${exitLabel} · Risk: $${riskUsd.toFixed(0)}/trade (min 0.01 lot)\nMultipliers: SL ${sl}x · TP1 ${tp1}x · TP2 ${tp2}x ATR`,
         confirmLabel: "Run & Save ↵",
         onConfirm: async () => {
           const btn = el("runBacktestBtn");
@@ -2230,6 +2286,7 @@ function initEventListeners() {
               duration_preset: isCustom ? "CUSTOM" : durCfg.preset,
               bars_tested: isCustom ? 5000 : durCfg.bars,
               exit_rule: exitRule,
+              risk_usd: riskUsd,
               sl_mult: sl,
               tp1_mult: tp1,
               tp2_mult: tp2,
@@ -2268,7 +2325,7 @@ function initEventListeners() {
   if (el("exportCsvBtn")) {
     el("exportCsvBtn").addEventListener("click", () => {
       if (!selectedRunDetail || !selectedRunDetail.trades) return;
-      const rows = [["Trade #", "Entry Time", "Exit Time", "Direction", "Strategy", "Entry", "SL", "TP1", "Exit", "Outcome", "Trade PnL Pts", "Total PnL Pts"]];
+      const rows = [["Trade #", "Entry Time", "Exit Time", "Direction", "Strategy", "Lot", "Entry", "SL", "TP1", "Exit", "Outcome", "Trade PnL ($)", "Total PnL ($)"]];
       const eqRows = selectedRunDetail.equity_curve || [];
       const tradeNumById = {};
       eqRows.forEach((row, idx) => {
@@ -2276,7 +2333,7 @@ function initEventListeners() {
       });
       selectedRunDetail.trades.forEach((t, i) => {
         const tradeNo = t.trade_no || (t.id != null && tradeNumById[t.id]) || (selectedRunDetail.trades.length - i);
-        rows.push([tradeNo, t.entry_time, t.exit_time, t.direction, t.signal_type, t.entry_price, t.sl_price, t.tp1_price, t.exit_price, t.outcome, t.pnl_pts, t.cum_pnl_pts ?? ""]);
+        rows.push([tradeNo, t.entry_time, t.exit_time, t.direction, t.signal_type, t.lot_size ?? 0.01, t.entry_price, t.sl_price, t.tp1_price, t.exit_price, t.outcome, t.pnl_usd ?? t.pnl_pts, t.cum_pnl_usd ?? t.cum_pnl_pts ?? ""]);
       });
       const blob = new Blob([rows.map((r) => r.join(",")).join("\n")], { type: "text/csv" });
       const a = document.createElement("a");
