@@ -1941,40 +1941,36 @@ def send_telegram_message(chat_id, html_text, event_type="SIGNAL"):
 
 
 def format_signal_telegram_html(sig_data, event_banner=None):
-    """Formats a full XAU/USD AI Agent Signal & Swing Structure report for Telegram."""
+    """Formats a concise XAU/USD signal report for Telegram."""
     style_name = sig_data.get("style_name", "Swing Trade (Pro Default)")
+    style_label = (sig_data.get("trading_style") or style_name.split()[0]).title()
     direction = sig_data.get("direction", "WAIT")
-    icon = "🟢 <b>BUY</b>" if direction == "BUY" else ("🔴 <b>SELL</b>" if direction == "SELL" else "🟡 <b>WAIT (HOLD FIRE)</b>")
-    ai = sig_data.get("ai_agent") or {}
-    f = sig_data.get("fundamentals") or {}
-    dxy = f.get("dxy") or {}
+    emoji = "🟢" if direction == "BUY" else ("🔴" if direction == "SELL" else "🟡")
+    symbol = sig_data["symbol"]
+    tf = sig_data["timeframe"]
+    ts = sig_data.get("last_candle_time_local", "")
 
-    header = event_banner or f"🏆 <b>XAU/USD AI AGENT SIGNAL ({style_name.upper()})</b>"
-    lines = [
-        header,
-        f"━━━━━━━━━━━━━━━━━━━━━━",
-        f"📊 <b>Symbol:</b> <code>{sig_data['symbol']}</code> ({sig_data['timeframe']})",
-        f"🎯 <b>Trading Type:</b> {style_name}",
-        f"⚡ <b>Final Verdict:</b> {icon} — <code>{sig_data['signal']}</code>",
-        f"🤖 <b>AI Agent Gate:</b> <code>{ai.get('verdict_badge', 'APPROVED')}</code> ({sig_data['confidence']}%)",
-        f"💰 <b>Spot Price:</b> <code>${sig_data['current_price']:.2f}</code>",
-        f"",
-        f"📌 <b>EXECUTION & RISK LEVELS:</b>",
-        f"• <b>Entry Price:</b> <code>${sig_data['entry']:.2f}</code>",
-        f"• <b>Stop Loss (SL):</b> <code>${sig_data['stop_loss']:.2f}</code> ({sig_data.get('sl_mult', 1.5)}x ATR)",
-        f"• <b>Take Profit 1 (TP1 + BE):</b> <code>${sig_data['take_profit_1']:.2f}</code> ({sig_data.get('tp1_mult', 2.5)}x ATR)",
-        f"• <b>Take Profit 2 (TP2 Runner):</b> <code>${sig_data['take_profit_2']:.2f}</code> ({sig_data.get('tp2_mult', 4.0)}x ATR)",
-        f"• <b>Reward : Risk:</b> <code>1 : {sig_data['risk_reward']}</code>",
-        f"",
-        f"🧠 <b>AI AGENT LAYER ANALYSIS:</b>",
-        f"{ai.get('executive_summary', sig_data.get('rationale', ''))}",
-        f"",
-        f"🌐 <b>MACRO & DXY INTELLIGENCE:</b>",
-        f"• <b>Gold Macro Bias:</b> <code>{f.get('bias', 'NEUTRAL')} ({f.get('score', 0):+d})</code>",
-        f"• <b>US Dollar (DXY):</b> <code>{dxy.get('price', 0.0):.3f} ({dxy.get('change_pct', 0.0):+.2f}%)</code>",
-        f"• <b>Fib Golden Pocket:</b> <code>{ai.get('watch_zone', '--')}</code>",
-        f"🕒 <i>{sig_data.get('last_candle_time_local', '')}</i>",
-    ]
+    header = event_banner or f"{emoji} <b>{symbol} · {direction}</b> ({style_label} · {tf})"
+
+    if direction == "WAIT":
+        lines = [
+            header,
+            f"Price: <code>${sig_data['current_price']:,.2f}</code> | Confidence: {sig_data['confidence']}%",
+            "No confirmed setup right now.",
+        ]
+    else:
+        lines = [
+            header,
+            f"Confidence: {sig_data['confidence']}% | R:R 1:{sig_data['risk_reward']}",
+            "",
+            f"Entry: <code>${sig_data['entry']:,.2f}</code>",
+            f"SL:    <code>${sig_data['stop_loss']:,.2f}</code>",
+            f"TP1:   <code>${sig_data['take_profit_1']:,.2f}</code>",
+            f"TP2:   <code>${sig_data['take_profit_2']:,.2f}</code>",
+        ]
+
+    if ts:
+        lines.extend(["", f"🕒 <i>{ts}</i>"])
     return "\n".join(lines)
 
 
@@ -2015,20 +2011,19 @@ def _on_live_position_event(ev_type, trade_obj, sig_data):
         return
 
     if ev_type == "NEW_SIGNAL":
-        banner = f"🚨 <b>NEW {sig_data.get('trading_style', 'SWING')} POSITION OPENED (#{trade_obj['id']})</b>"
+        style_label = (sig_data.get("trading_style") or "SWING").title()
+        banner = f"🚨 <b>{sig_data['symbol']} · {sig_data.get('direction', 'WAIT')} #{trade_obj['id']}</b> ({style_label} · {sig_data['timeframe']})"
         broadcast_telegram_signal(sig_data, event_type="AUTO_NEW_SIGNAL", event_banner=banner)
     elif ev_type == "POSITION_CLOSED":
         st = trade_obj.get("status", "CLOSED")
         pnl = trade_obj.get("pnl_pts", 0.0)
         emoji = "✅" if pnl >= 0 else "🛑"
+        style_label = (trade_obj.get("trading_style") or "SWING").title()
         msg = (
-            f"{emoji} <b>POSITION #{trade_obj['id']} CLOSED: {st}</b>\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"• <b>Symbol / TF:</b> <code>{trade_obj['symbol']}</code> ({trade_obj['timeframe']} · {trade_obj.get('trading_style', 'SWING')})\n"
-            f"• <b>Direction:</b> <b>{trade_obj['direction']}</b>\n"
-            f"• <b>Entry → Exit:</b> <code>${trade_obj['entry_price']:.2f}</code> → <code>${(trade_obj.get('outcome_price') or 0):.2f}</code>\n"
-            f"• <b>Realized P&L (1 oz):</b> <b>{'+' if pnl >= 0 else ''}${pnl:.2f}</b>\n"
-            f"🔓 <i>Single-position lock released. AI Agent is now scanning for the next confirmed setup.</i>"
+            f"{emoji} <b>{trade_obj['symbol']} #{trade_obj['id']} CLOSED · {st}</b>\n"
+            f"{trade_obj['direction']} ({style_label} · {trade_obj['timeframe']})\n"
+            f"<code>${trade_obj['entry_price']:,.2f}</code> → <code>${(trade_obj.get('outcome_price') or 0):,.2f}</code>\n"
+            f"P&L: <b>{'+' if pnl >= 0 else ''}${pnl:.2f}</b>"
         )
         for s in subs:
             send_telegram_message(s["chat_id"], msg, event_type=f"AUTO_{st}")
