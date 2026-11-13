@@ -213,7 +213,10 @@ DURATION_PRESETS = {
     "7_DAYS": {"bars": 2500, "label": "7 Days Deep"},
     "30_DAYS": {"bars": 5000, "force_min_tf": "5m", "label": "30 Days Deep"},
     "90_DAYS": {"bars": 5000, "force_min_tf": "15m", "label": "90 Days Deep"},
-    "1_YEAR": {"bars": 5000, "force_min_tf": "1h", "label": "1 Year (365d) Deep"},
+    "1_YEAR": {"bars": 7000, "force_min_tf": "1h", "label": "1 Year (365d) Deep"},
+    "2_YEARS": {"bars": 14000, "force_min_tf": "1h", "label": "2 Years Deep"},
+    "3_YEARS": {"bars": 10000, "force_min_tf": "4h", "label": "3 Years Deep"},
+    "5_YEARS": {"bars": 15000, "force_min_tf": "4h", "label": "5 Years Deep"},
 }
 
 _FUNDAMENTAL_CACHE = {"ts": 0.0, "data": None}
@@ -274,17 +277,18 @@ def _ws_recv_frame(sock):
     return data.decode("utf-8", errors="ignore")
 
 
-def fetch_tradingview_candles(symbol="OANDA:XAUUSD", interval="1h", n_bars=450):
+def fetch_tradingview_candles(symbol="OANDA:XAUUSD", interval="1h", n_bars=450, min_timestamp=None):
     """
     Connects directly to TradingView's live chart WebSocket (wss://data.tradingview.com)
-    to pull real-time Spot Gold OHLCV candles (supports up to 5,000 historical bars).
+    to pull real-time OHLCV candles. Automatically paginates via `request_more_data`
+    when more than 5,000 bars or an older `min_timestamp` is requested.
     """
     tv_int = TV_INTERVAL_MAP.get(interval, "60")
     host = "data.tradingview.com"
     ctx = _ssl_context()
-    raw = socket.create_connection((host, 443), timeout=12)
+    raw = socket.create_connection((host, 443), timeout=15)
     sock = ctx.wrap_socket(raw, server_hostname=host)
-    sock.settimeout(12)
+    sock.settimeout(15)
     try:
         key = base64.b64encode(os.urandom(16)).decode("ascii")
         handshake = (
@@ -315,10 +319,15 @@ def fetch_tradingview_candles(symbol="OANDA:XAUUSD", interval="1h", n_bars=450):
                 [cs, "sds_sym_1", f'={{"symbol":"{symbol}","adjustment":"splits"}}'],
             ),
         )
-        _ws_send(sock, _tv_pack("create_series", [cs, "sds_1", "s1", "sds_sym_1", tv_int, n_bars, ""]))
+        initial_bars = min(max(int(n_bars), 50), 5000)
+        _ws_send(sock, _tv_pack("create_series", [cs, "sds_1", "s1", "sds_sym_1", tv_int, initial_bars, ""]))
 
-        bars = []
-        for _ in range(45):
+        bars_by_ts = {}
+        last_batch_count = 0
+        batches = 1
+        max_batches = 7
+
+        for _ in range(180):
             frame = _ws_recv_frame(sock)
             if not frame:
                 break
@@ -336,22 +345,32 @@ def fetch_tradingview_candles(symbol="OANDA:XAUUSD", interval="1h", n_bars=450):
                             dt_local = datetime.fromtimestamp(ts, tz=TZ_UTC7)
                             c_val = float(v[4])
                             dec = 4 if c_val < 10 else (3 if c_val < 100 else 2)
-                            bars.append(
-                                {
-                                    "timestamp": ts,
-                                    "time": dt_utc.strftime("%Y-%m-%d %H:%M UTC"),
-                                    "time_local": dt_local.strftime("%Y-%m-%d %H:%M UTC+7"),
-                                    "open": round(float(v[1]), dec),
-                                    "high": round(float(v[2]), dec),
-                                    "low": round(float(v[3]), dec),
-                                    "close": round(c_val, dec),
-                                    "volume": round(float(v[5]) if len(v) > 5 else 0.0, 1),
-                                }
-                            )
+                            bars_by_ts[ts] = {
+                                "timestamp": ts,
+                                "time": dt_utc.strftime("%Y-%m-%d %H:%M UTC"),
+                                "time_local": dt_local.strftime("%Y-%m-%d %H:%M UTC+7"),
+                                "open": round(float(v[1]), dec),
+                                "high": round(float(v[2]), dec),
+                                "low": round(float(v[3]), dec),
+                                "close": round(c_val, dec),
+                                "volume": round(float(v[5]) if len(v) > 5 else 0.0, 1),
+                            }
                     if obj.get("m") == "series_completed":
-                        return symbol, bars
+                        cur_count = len(bars_by_ts)
+                        oldest_ts = min(bars_by_ts.keys()) if bars_by_ts else None
+                        need_more_bars = cur_count < n_bars
+                        need_older_ts = (min_timestamp is not None) and (oldest_ts is None or oldest_ts > min_timestamp)
+                        grew = cur_count > last_batch_count
+                        if (need_more_bars or need_older_ts) and grew and batches < max_batches:
+                            last_batch_count = cur_count
+                            batches += 1
+                            _ws_send(sock, _tv_pack("request_more_data", [cs, "sds_1", 5000]))
+                        else:
+                            bars = [bars_by_ts[k] for k in sorted(bars_by_ts.keys())]
+                            return symbol, bars
                 except Exception:
                     pass
+        bars = [bars_by_ts[k] for k in sorted(bars_by_ts.keys())]
         return symbol, bars
     finally:
         try:
@@ -1904,11 +1923,16 @@ def get_saved_trading_config():
         except Exception:
             return float(default)
 
+    exit_rule = s.get("saved_exit_rule", "TP1_ONLY").upper()
+    if exit_rule not in ("TP1_ONLY", "BE_RUNNER"):
+        exit_rule = "TP1_ONLY"
+
     return {
         "symbol": sym,
         "trading_style": style,
         "strategy": strat,
         "timeframe": tf,
+        "exit_rule": exit_rule,
         "sl_mult": _flt("saved_sl_mult", style_cfg["sl_mult"]),
         "tp1_mult": _flt("saved_tp1_mult", style_cfg["tp1_mult"]),
         "tp2_mult": _flt("saved_tp2_mult", style_cfg["tp2_mult"]),
@@ -1927,6 +1951,9 @@ def run_and_store_backtest(
     strategy_mode="PRO_CONFIRMED",
     bars_tested=450,
     duration_preset=None,
+    start_date=None,
+    end_date=None,
+    exit_rule="TP1_ONLY",
     sl_mult=None,
     tp1_mult=None,
     tp2_mult=None,
@@ -1934,16 +1961,19 @@ def run_and_store_backtest(
     candles=None,
 ):
     """
-    Runs a historical simulation across `bars_tested` (or deep `duration_preset`: 7_DAYS, 30_DAYS, 90_DAYS, 1_YEAR)
-    for the chosen `trading_style` and `strategy` with STRICT SINGLE-POSITION LOCK:
-    - Never opens a new trade while a trade is still open.
-    - Never opens a trade when `direction == 'WAIT'`.
-    - Moves Stop Loss to Break-Even (Entry) once TP1 is hit, banking 50% at TP1 and letting 50% run to TP2!
+    Runs a historical simulation across `bars_tested`, `duration_preset` (up to 5_YEARS),
+    or custom `start_date`..`end_date` (YYYY-MM-DD, UTC+7) with STRICT SINGLE-POSITION LOCK:
+    - `exit_rule == "TP1_ONLY"` (default): 100% closes at TP1 (WIN_TP1) or SL (LOSS_SL). No BE move.
+    - `exit_rule == "BE_RUNNER"`: 50% closes at TP1 + SL moves to BE; TP2 exits at blended (tp1 + tp2)/2.
     """
     if trading_style not in TRADING_STYLES:
         trading_style = "SWING"
     if strategy not in TRADING_STRATEGIES:
         strategy = "FLEXIBLE_HYBRID"
+    exit_rule = (exit_rule or "TP1_ONLY").upper()
+    if exit_rule not in ("TP1_ONLY", "BE_RUNNER"):
+        exit_rule = "TP1_ONLY"
+
     style_cfg = TRADING_STYLES[trading_style]
     strat_cfg = TRADING_STRATEGIES[strategy]
 
@@ -1956,19 +1986,59 @@ def run_and_store_backtest(
 
     actual_interval = interval
     actual_bars = int(bars_tested)
+    tf_rank = {"1m": 1, "5m": 5, "15m": 15, "1h": 60, "4h": 240, "1d": 1440}
+    tf_seconds = {"1m": 60, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1d": 86400}
 
-    if duration_preset and duration_preset in DURATION_PRESETS:
+    start_ts = None
+    end_ts = None
+    min_ts_fetch = None
+    if start_date or end_date:
+        now_dt = datetime.now(TZ_UTC7)
+        if start_date:
+            s_dt = datetime.strptime(start_date[:10], "%Y-%m-%d").replace(tzinfo=TZ_UTC7)
+            start_ts = int(s_dt.timestamp())
+        if end_date:
+            e_dt = datetime.strptime(end_date[:10], "%Y-%m-%d").replace(
+                hour=23, minute=59, second=59, tzinfo=TZ_UTC7
+            )
+            end_ts = int(e_dt.timestamp())
+        else:
+            end_ts = int(now_dt.timestamp())
+
+        if start_ts is not None:
+            days_back = max(1, (int(now_dt.timestamp()) - start_ts) // 86400 + 2)
+            if days_back > 1100 and tf_rank.get(actual_interval, 60) < tf_rank["4h"]:
+                actual_interval = "4h"
+            elif days_back > 365 and tf_rank.get(actual_interval, 60) < tf_rank["1h"]:
+                actual_interval = "1h"
+            elif days_back > 60 and tf_rank.get(actual_interval, 60) < tf_rank["15m"]:
+                actual_interval = "15m"
+            elif days_back > 14 and tf_rank.get(actual_interval, 60) < tf_rank["5m"]:
+                actual_interval = "5m"
+
+            bar_sec = tf_seconds.get(actual_interval, 3600)
+            warmup_sec = 220 * bar_sec
+            min_ts_fetch = start_ts - warmup_sec
+            est_bars = int((int(now_dt.timestamp()) - min_ts_fetch) / bar_sec) + 250
+            actual_bars = max(actual_bars, min(est_bars, 30000))
+    elif duration_preset and duration_preset in DURATION_PRESETS:
         preset = DURATION_PRESETS[duration_preset]
         actual_bars = preset["bars"]
         min_tf = preset.get("force_min_tf")
-        tf_rank = {"1m": 1, "5m": 5, "15m": 15, "1h": 60, "4h": 240, "1d": 1440}
         if min_tf and tf_rank.get(actual_interval, 60) < tf_rank.get(min_tf, 60):
             actual_interval = min_tf
 
     if candles is None or len(candles) < actual_bars:
         _, candles = fetch_tradingview_candles(
-            symbol=symbol, interval=actual_interval, n_bars=actual_bars
+            symbol=symbol,
+            interval=actual_interval,
+            n_bars=actual_bars,
+            min_timestamp=min_ts_fetch,
         )
+
+    if end_ts is not None:
+        candles = [c for c in candles if c["timestamp"] <= end_ts]
+
     if len(candles) < 40:
         raise RuntimeError(f"Insufficient candles ({len(candles)}) to backtest")
 
@@ -1995,6 +2065,10 @@ def run_and_store_backtest(
     trades = []
     n = len(candles)
     i = 50
+    if start_ts is not None:
+        while i < n - 3 and candles[i]["timestamp"] < start_ts:
+            i += 1
+
     cum_pnl = 0.0
     peak_pnl = 0.0
     max_dd = 0.0
@@ -2053,51 +2127,79 @@ def run_and_store_backtest(
         for j in range(i + 1, min(i + max_hold, n)):
             ch = candles[j]["high"]
             cl = candles[j]["low"]
-            if direction == "BUY":
-                if cl <= active_sl:
-                    if hit_tp1:
-                        outcome = "WIN_TP1_BE"
-                        exit_price = round((tp1 + entry) / 2.0, dec)
-                    else:
+            if exit_rule == "TP1_ONLY":
+                if direction == "BUY":
+                    if cl <= sl:
                         outcome = "LOSS_SL"
                         exit_price = sl
-                    exit_time = candles[j]["time_local"]
-                    exit_idx = j
-                    break
-                if ch >= tp2:
-                    outcome = "WIN_TP2"
-                    exit_price = tp2
-                    exit_time = candles[j]["time_local"]
-                    exit_idx = j
-                    break
-                if ch >= tp1 and not hit_tp1:
-                    hit_tp1 = True
-                    active_sl = entry
+                        exit_time = candles[j]["time_local"]
+                        exit_idx = j
+                        break
+                    if ch >= tp1:
+                        outcome = "WIN_TP1"
+                        exit_price = tp1
+                        exit_time = candles[j]["time_local"]
+                        exit_idx = j
+                        break
+                else:
+                    if ch >= sl:
+                        outcome = "LOSS_SL"
+                        exit_price = sl
+                        exit_time = candles[j]["time_local"]
+                        exit_idx = j
+                        break
+                    if cl <= tp1:
+                        outcome = "WIN_TP1"
+                        exit_price = tp1
+                        exit_time = candles[j]["time_local"]
+                        exit_idx = j
+                        break
             else:
-                if ch >= active_sl:
-                    if hit_tp1:
-                        outcome = "WIN_TP1_BE"
-                        exit_price = round((tp1 + entry) / 2.0, dec)
-                    else:
-                        outcome = "LOSS_SL"
-                        exit_price = sl
-                    exit_time = candles[j]["time_local"]
-                    exit_idx = j
-                    break
-                if cl <= tp2:
-                    outcome = "WIN_TP2"
-                    exit_price = tp2
-                    exit_time = candles[j]["time_local"]
-                    exit_idx = j
-                    break
-                if cl <= tp1 and not hit_tp1:
-                    hit_tp1 = True
-                    active_sl = entry
+                if direction == "BUY":
+                    if cl <= active_sl:
+                        if hit_tp1:
+                            outcome = "WIN_TP1_BE"
+                            exit_price = round((tp1 + entry) / 2.0, dec)
+                        else:
+                            outcome = "LOSS_SL"
+                            exit_price = sl
+                        exit_time = candles[j]["time_local"]
+                        exit_idx = j
+                        break
+                    if ch >= tp2:
+                        outcome = "WIN_TP2"
+                        exit_price = round((tp1 + tp2) / 2.0, dec)
+                        exit_time = candles[j]["time_local"]
+                        exit_idx = j
+                        break
+                    if ch >= tp1 and not hit_tp1:
+                        hit_tp1 = True
+                        active_sl = entry
+                else:
+                    if ch >= active_sl:
+                        if hit_tp1:
+                            outcome = "WIN_TP1_BE"
+                            exit_price = round((tp1 + entry) / 2.0, dec)
+                        else:
+                            outcome = "LOSS_SL"
+                            exit_price = sl
+                        exit_time = candles[j]["time_local"]
+                        exit_idx = j
+                        break
+                    if cl <= tp2:
+                        outcome = "WIN_TP2"
+                        exit_price = round((tp1 + tp2) / 2.0, dec)
+                        exit_time = candles[j]["time_local"]
+                        exit_idx = j
+                        break
+                    if cl <= tp1 and not hit_tp1:
+                        hit_tp1 = True
+                        active_sl = entry
 
         if outcome is None and hit_tp1:
             outcome = "WIN_TP1"
-            exit_price = tp1
             exit_idx = min(i + max_hold - 1, n - 1)
+            exit_price = round((tp1 + candles[exit_idx]["close"]) / 2.0, dec) if exit_rule == "BE_RUNNER" else tp1
             exit_time = candles[exit_idx]["time_local"]
 
         if outcome is not None:
@@ -2108,6 +2210,7 @@ def run_and_store_backtest(
             max_dd = max(max_dd, round(peak_pnl - cum_pnl, dec))
             trades.append(
                 {
+                    "trade_no": len(trades) + 1,
                     "entry_time": candles[i]["time_local"],
                     "exit_time": exit_time,
                     "direction": direction,
@@ -2143,12 +2246,18 @@ def run_and_store_backtest(
 
     span_str = ""
     if candles:
-        span_str = f"{candles[0]['time_local'][:10]} → {candles[-1]['time_local'][:10]}"
+        span_start = start_date[:10] if start_date else candles[0]["time_local"][:10]
+        span_end = end_date[:10] if end_date else candles[-1]["time_local"][:10]
+        span_str = f"{span_start} → {span_end}"
 
     strat_label = TRADING_STRATEGIES.get(effective_strategy, strat_cfg)["short"]
-    mode_label = f"{trading_style} · {strat_label}"
-    if duration_preset and duration_preset in DURATION_PRESETS:
-        mode_label = f"{trading_style} · {strat_label} ({DURATION_PRESETS[duration_preset]['label']})"
+    exit_label = "TP1 Only" if exit_rule == "TP1_ONLY" else "50% TP1 + BE"
+    if start_date or end_date:
+        mode_label = f"{trading_style} · {strat_label} · {exit_label} ({span_str})"
+    elif duration_preset and duration_preset in DURATION_PRESETS:
+        mode_label = f"{trading_style} · {strat_label} · {exit_label} ({DURATION_PRESETS[duration_preset]['label']})"
+    else:
+        mode_label = f"{trading_style} · {strat_label} · {exit_label}"
 
     now_local = datetime.now(TZ_UTC7).strftime("%Y-%m-%d %H:%M:%S UTC+7")
     summary = {
@@ -2157,6 +2266,7 @@ def run_and_store_backtest(
         "timeframe": actual_interval,
         "trading_style": trading_style,
         "strategy_mode": mode_label,
+        "exit_rule": exit_rule,
         "bars_tested": len(candles),
         "sl_atr_mult": sl_mult,
         "tp1_atr_mult": tp1_mult,

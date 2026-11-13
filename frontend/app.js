@@ -72,7 +72,10 @@ const DURATION_BARS_MAP = {
   "7d":  { preset: "7_DAYS",   bars: 2500 },
   "30d": { preset: "30_DAYS",  bars: 5000 },
   "90d": { preset: "90_DAYS",  bars: 5000 },
-  "1y":  { preset: "1_YEAR",   bars: 5000 }
+  "1y":  { preset: "1_YEAR",   bars: 7000 },
+  "2y":  { preset: "2_YEARS",  bars: 14000 },
+  "3y":  { preset: "3_YEARS",  bars: 10000 },
+  "5y":  { preset: "5_YEARS",  bars: 15000 }
 };
 
 const STRATEGY_MODE_MAP = {
@@ -1249,28 +1252,40 @@ function renderSelectedBacktest(bt) {
 
   const tbody = el("btTradesBody");
   if (tbody) {
+    const eqRows = bt.equity_curve || [];
+    const tradeNumById = {};
+    eqRows.forEach((row, idx) => {
+      if (row && row.id != null) tradeNumById[row.id] = idx + 1;
+    });
     tbody.innerHTML = trades.length
       ? trades
-          .map((t) => {
+          .map((t, idx) => {
             const isWin = t.outcome && t.outcome.startsWith("WIN");
             const sEntry = (t.entry_time || "").replace(" UTC+7", "").slice(5);
             const sExit = (t.exit_time || "").replace(" UTC+7", "").slice(11);
+            const tradeNo = t.trade_no || (t.id != null && tradeNumById[t.id]) || (trades.length - idx);
+            const cumPnl = Number.isFinite(Number(t.cum_pnl_pts)) ? Number(t.cum_pnl_pts) : (Number.isFinite(Number(t.cum_pnl)) ? Number(t.cum_pnl) : 0);
+            const pnlVal = Number(t.pnl_pts ?? t.pnl ?? 0);
             return `
               <tr>
+                <td style="font-weight:700;color:var(--text-2);">#${tradeNo}</td>
                 <td>${escapeHtml(sEntry)} → ${escapeHtml(sExit)}</td>
                 <td><span class="pill ${t.direction === "BUY" ? "BUY" : "SELL"}">${escapeHtml(t.direction)}</span></td>
                 <td>${escapeHtml(t.signal_type)}</td>
-                <td>$${t.entry_price.toFixed(1)} → $${t.exit_price.toFixed(1)}</td>
-                <td>$${t.sl_price.toFixed(1)} / $${t.tp1_price.toFixed(1)}</td>
+                <td>$${Number(t.entry_price ?? t.entry ?? 0).toFixed(1)} → $${Number(t.exit_price ?? t.exit ?? 0).toFixed(1)}</td>
+                <td>$${Number(t.sl_price ?? t.sl ?? 0).toFixed(1)} / $${Number(t.tp1_price ?? t.tp1 ?? 0).toFixed(1)}</td>
                 <td><span class="pill ${isWin ? "BUY" : "SELL"}">${escapeHtml(t.outcome)}</span></td>
-                <td style="font-weight:800;color:${t.pnl_pts >= 0 ? "var(--buy)" : "var(--sell)"};">
-                  ${t.pnl_pts >= 0 ? "+" : ""}${t.pnl_pts.toFixed(2)}
+                <td style="font-weight:800;color:${pnlVal >= 0 ? "var(--buy)" : "var(--sell)"};">
+                  ${pnlVal >= 0 ? "+" : ""}${pnlVal.toFixed(2)}
+                </td>
+                <td style="font-weight:800;color:${cumPnl >= 0 ? "var(--buy)" : "var(--sell)"};">
+                  ${cumPnl >= 0 ? "+" : ""}${cumPnl.toFixed(2)}
                 </td>
               </tr>
             `;
           })
           .join("")
-      : `<tr><td colspan="7" style="text-align:center;color:var(--text-2);padding:14px;">No trades found.</td></tr>`;
+      : `<tr><td colspan="9" style="text-align:center;color:var(--text-2);padding:14px;">No trades found.</td></tr>`;
   }
 
   if (currentView === "backtest") drawEquityCurve(bt.equity_curve || []);
@@ -2155,44 +2170,79 @@ function initEventListeners() {
     });
   }
 
-  // Backtest Runner (with Confirmation Dialog) & Ledger Tabs
+  // Backtest Horizon Custom Date Toggle & Runner (with Confirmation Dialog)
+  if (el("btHorizonSelect")) {
+    const syncCustomDateVisibility = () => {
+      const wrap = el("btCustomDateWrap");
+      if (!wrap) return;
+      const isCustom = el("btHorizonSelect").value === "custom";
+      wrap.style.display = isCustom ? "flex" : "none";
+      if (isCustom) {
+        const now = new Date();
+        const endIso = now.toISOString().slice(0, 10);
+        const startD = new Date(now.getTime() - 365 * 86400 * 1000);
+        const startIso = startD.toISOString().slice(0, 10);
+        if (el("btStartDate") && !el("btStartDate").value) el("btStartDate").value = startIso;
+        if (el("btEndDate") && !el("btEndDate").value) el("btEndDate").value = endIso;
+      }
+    };
+    el("btHorizonSelect").addEventListener("change", syncCustomDateVisibility);
+    syncCustomDateVisibility();
+  }
+
   if (el("runBacktestBtn")) {
     el("runBacktestBtn").addEventListener("click", () => {
       const uiStrat = el("btStrategySelect")?.value || currentStrategy;
       const horizonKey = el("btHorizonSelect")?.value || "30d";
+      const isCustom = horizonKey === "custom";
+      const startDate = isCustom ? (el("btStartDate")?.value || "") : "";
+      const endDate = isCustom ? (el("btEndDate")?.value || "") : "";
+      if (isCustom && (!startDate || !endDate || startDate > endDate)) {
+        showToast("Please select a valid Start Date and End Date.");
+        return;
+      }
+      const exitRule = el("btExitRuleSelect")?.value || "TP1_ONLY";
+      const exitLabel = exitRule === "BE_RUNNER" ? "50% TP1 + BE → TP2" : "100% Close at TP1 (No BE)";
       const durCfg = DURATION_BARS_MAP[horizonKey] || DURATION_BARS_MAP["30d"];
       const sl = parseFloat(el("btSlInput")?.value) || currentSlMult;
       const tp1 = parseFloat(el("btTp1Input")?.value) || currentTp1Mult;
       const tp2 = parseFloat(el("btTp2Input")?.value) || currentTp2Mult;
       const stratName = STRATEGY_CATALOG[uiStrat]?.short || uiStrat;
+      const horizonMeta = isCustom ? `Custom Range: ${startDate} → ${endDate}` : `${durCfg.bars} bars (${durCfg.preset})`;
 
       openConfirmDialog({
         title: "Run Deep Historical Backtest",
         badge: "BACKTEST",
         desc: "Execute walk-forward simulation and persist the run to Supabase PostgreSQL?",
-        meta: `Symbol: ${currentSymbol} (${currentStyle} · ${stratName} · ${currentTf})\nHorizon: ${durCfg.bars} bars (${durCfg.preset})\nMultipliers: SL ${sl}x · TP1 ${tp1}x · TP2 ${tp2}x ATR`,
+        meta: `Symbol: ${currentSymbol} (${currentStyle} · ${stratName} · ${currentTf})\nHorizon: ${horizonMeta}\nExit Rule: ${exitLabel}\nMultipliers: SL ${sl}x · TP1 ${tp1}x · TP2 ${tp2}x ATR`,
         confirmLabel: "Run & Save ↵",
         onConfirm: async () => {
           const btn = el("runBacktestBtn");
           btn.textContent = "Running...";
           btn.disabled = true;
           try {
+            const payload = {
+              trading_style: currentStyle,
+              strategy: uiStrat,
+              symbol: currentSymbol,
+              interval: currentTf,
+              strategy_mode: STRATEGY_MODE_MAP[uiStrat] || "PRO_CONFIRMED",
+              duration_preset: isCustom ? "CUSTOM" : durCfg.preset,
+              bars_tested: isCustom ? 5000 : durCfg.bars,
+              exit_rule: exitRule,
+              sl_mult: sl,
+              tp1_mult: tp1,
+              tp2_mult: tp2,
+              min_confidence: currentMinConf
+            };
+            if (isCustom) {
+              payload.start_date = startDate;
+              payload.end_date = endDate;
+            }
             const res = await fetch(`${API_BASE}/api/backtest/run`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                trading_style: currentStyle,
-                strategy: uiStrat,
-                symbol: currentSymbol,
-                interval: currentTf,
-                strategy_mode: STRATEGY_MODE_MAP[uiStrat] || "PRO_CONFIRMED",
-                duration_preset: durCfg.preset,
-                bars_tested: durCfg.bars,
-                sl_mult: sl,
-                tp1_mult: tp1,
-                tp2_mult: tp2,
-                min_confidence: currentMinConf
-              })
+              body: JSON.stringify(payload)
             });
             const data = await res.json();
             if (data.detail) {
@@ -2201,6 +2251,8 @@ function initEventListeners() {
               renderSelectedBacktest(data.detail);
               updateBentoKpis();
               showToast(`Saved Backtest Run #${data.detail.id} to Supabase!`);
+            } else if (data.error) {
+              showToast(`Backtest error: ${data.error}`);
             }
           } catch (err) {
             showToast("Backtest failed");
@@ -2216,9 +2268,15 @@ function initEventListeners() {
   if (el("exportCsvBtn")) {
     el("exportCsvBtn").addEventListener("click", () => {
       if (!selectedRunDetail || !selectedRunDetail.trades) return;
-      const rows = [["Trade #", "Entry Time", "Exit Time", "Direction", "Strategy", "Entry", "SL", "TP1", "Exit", "Outcome", "PnL Pts"]];
+      const rows = [["Trade #", "Entry Time", "Exit Time", "Direction", "Strategy", "Entry", "SL", "TP1", "Exit", "Outcome", "Trade PnL Pts", "Total PnL Pts"]];
+      const eqRows = selectedRunDetail.equity_curve || [];
+      const tradeNumById = {};
+      eqRows.forEach((row, idx) => {
+        if (row && row.id != null) tradeNumById[row.id] = idx + 1;
+      });
       selectedRunDetail.trades.forEach((t, i) => {
-        rows.push([i + 1, t.entry_time, t.exit_time, t.direction, t.signal_type, t.entry_price, t.sl_price, t.tp1_price, t.exit_price, t.outcome, t.pnl_pts]);
+        const tradeNo = t.trade_no || (t.id != null && tradeNumById[t.id]) || (selectedRunDetail.trades.length - i);
+        rows.push([tradeNo, t.entry_time, t.exit_time, t.direction, t.signal_type, t.entry_price, t.sl_price, t.tp1_price, t.exit_price, t.outcome, t.pnl_pts, t.cum_pnl_pts ?? ""]);
       });
       const blob = new Blob([rows.map((r) => r.join(",")).join("\n")], { type: "text/csv" });
       const a = document.createElement("a");

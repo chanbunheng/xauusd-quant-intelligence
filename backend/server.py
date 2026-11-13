@@ -357,6 +357,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     interval = style_cfg["default_tf"]
                 strategy_mode = body.get("strategy_mode", "PRO_CONFIRMED")
                 duration_preset = body.get("duration_preset", "450_BARS")
+                start_date = body.get("start_date") or None
+                end_date = body.get("end_date") or None
+                exit_rule = (body.get("exit_rule") or saved_cfg.get("exit_rule") or "TP1_ONLY").upper()
+                if exit_rule not in ("TP1_ONLY", "BE_RUNNER"):
+                    exit_rule = "TP1_ONLY"
                 bars_tested = int(body.get("bars_tested", 450))
                 sl_mult = float(body.get("sl_mult", style_cfg["sl_mult"]))
                 tp1_mult = float(body.get("tp1_mult", style_cfg["tp1_mult"]))
@@ -371,6 +376,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     strategy_mode=strategy_mode,
                     bars_tested=bars_tested,
                     duration_preset=duration_preset,
+                    start_date=start_date,
+                    end_date=end_date,
+                    exit_rule=exit_rule,
                     sl_mult=sl_mult,
                     tp1_mult=tp1_mult,
                     tp2_mult=tp2_mult,
@@ -459,6 +467,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     "saved_trading_style": lambda v: str(v).upper() if str(v).upper() in ALLOWED_STYLES else None,
                     "saved_strategy": lambda v: str(v).upper() if str(v).upper() in ALLOWED_STRATEGIES else None,
                     "saved_timeframe": lambda v: str(v) if str(v) in ALLOWED_INTERVALS else None,
+                    "saved_exit_rule": lambda v: str(v).upper() if str(v).upper() in ("TP1_ONLY", "BE_RUNNER") else None,
                     "saved_sl_mult": lambda v: str(round(float(v), 2)),
                     "saved_tp1_mult": lambda v: str(round(float(v), 2)),
                     "saved_tp2_mult": lambda v: str(round(float(v), 2)),
