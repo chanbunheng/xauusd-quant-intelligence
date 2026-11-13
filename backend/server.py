@@ -286,6 +286,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 status = verify_telegram_bot(force=force)
                 settings = get_all_settings()
                 status["has_gemini_key"] = bool(settings.get("gemini_api_key", "").strip())
+                status["has_claude_key"] = bool(settings.get("claude_api_key", "").strip())
+                status["claude_base_url"] = settings.get("claude_base_url", "https://api.laalaa.me")
+                status["claude_model"] = settings.get("claude_model", "claude-sonnet-5-5")
                 status["saved_settings"] = saved_cfg
                 self._send_json(status)
             except Exception as exc:
@@ -462,6 +465,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     set_setting("telegram_auto_notify", "1" if body["telegram_auto_notify"] else "0")
                 if "gemini_api_key" in body:
                     set_setting("gemini_api_key", str(body["gemini_api_key"]).strip())
+                if "claude_api_key" in body:
+                    set_setting("claude_api_key", str(body["claude_api_key"]).strip())
+                if "claude_base_url" in body and str(body["claude_base_url"]).strip():
+                    set_setting("claude_base_url", str(body["claude_base_url"]).strip().rstrip("/"))
+                if "claude_model" in body and str(body["claude_model"]).strip():
+                    set_setting("claude_model", str(body["claude_model"]).strip())
                 if "remove_chat_id" in body and body["remove_chat_id"]:
                     remove_telegram_subscriber(body["remove_chat_id"])
 
@@ -497,6 +506,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 status = verify_telegram_bot(force=False)
                 settings = get_all_settings()
                 status["has_gemini_key"] = bool(settings.get("gemini_api_key", "").strip())
+                status["has_claude_key"] = bool(settings.get("claude_api_key", "").strip())
+                status["claude_base_url"] = settings.get("claude_base_url", "https://api.laalaa.me")
+                status["claude_model"] = settings.get("claude_model", "claude-sonnet-5-5")
                 saved_cfg = get_saved_trading_config()
                 self._send_json({"ok": True, "telegram": status, "saved_settings": saved_cfg})
             except Exception as exc:

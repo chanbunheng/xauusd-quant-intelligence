@@ -963,12 +963,25 @@
           <div class="equal-grid">
             <div class="card">
               <div class="card-header">
-                <div class="card-title">🔑 Cloud AI Key (`gemini-4-argon`)</div>
-                <span class="mode-safety-pill paper-sim">OPTIONAL</span>
+                <div class="card-title">🔑 Cloud AI Key (Claude API)</div>
+                <span id="claudeKeyStatusBadge" class="mode-safety-pill paper-sim">CONFIGURED</span>
               </div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <input type="password" id="geminiKeyInput" placeholder="Enter GEMINI_API_KEY (AIza...)" style="flex:1;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:7px 10px;border-radius:7px;font-size:11.5px;" />
-                <button class="btn primary" id="saveGeminiKeyBtn">Save Key</button>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <input type="text" id="claudeBaseUrlInput" value="https://api.laalaa.me" placeholder="Base URL (https://api.laalaa.me)" style="flex:1.2;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:7px 10px;border-radius:7px;font-size:11.5px;font-family:var(--font-mono);" />
+                  <select id="claudeModelSelect" class="ctrl-select" style="flex:0.8;">
+                    <option value="claude-sonnet-5-5" selected>claude-sonnet-5-5</option>
+                    <option value="claude-opus-5-5">claude-opus-5-5</option>
+                    <option value="claude-opus-5">claude-opus-5</option>
+                    <option value="claude-opus-4-8">claude-opus-4-8</option>
+                    <option value="claude-opus-4-7">claude-opus-4-7</option>
+                    <option value="claude-opus-4-6">claude-opus-4-6</option>
+                  </select>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <input type="password" id="claudeKeyInput" placeholder="Enter Claude API Key (sk-...)" style="flex:1;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:7px 10px;border-radius:7px;font-size:11.5px;font-family:var(--font-mono);" />
+                  <button class="btn primary" id="saveClaudeKeyBtn">Save Claude API</button>
+                </div>
               </div>
             </div>
 

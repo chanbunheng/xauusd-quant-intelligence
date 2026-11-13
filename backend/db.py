@@ -224,8 +224,11 @@ def init_db():
             "telegram_bot_token": DEFAULT_TELEGRAM_TOKEN,
             "telegram_auto_notify": "1",
             "default_trading_style": "SWING",
-            "ai_agent_mode": "HYBRID_ARGON",
+            "ai_agent_mode": "CLAUDE_DEBATE",
             "gemini_api_key": os.environ.get("GEMINI_API_KEY", ""),
+            "claude_api_key": os.environ.get("CLAUDE_API_KEY", ""),
+            "claude_base_url": os.environ.get("CLAUDE_BASE_URL", "https://api.laalaa.me"),
+            "claude_model": os.environ.get("CLAUDE_MODEL", "claude-sonnet-5-5"),
             "telegram_last_update_id": "0",
         }
         for k, v in defaults.items():

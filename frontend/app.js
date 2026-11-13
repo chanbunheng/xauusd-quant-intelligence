@@ -138,6 +138,11 @@ function loadSavedConfigFromLocal() {
     if (el("btRiskUsdInput")) el("btRiskUsdInput").value = currentRiskUsd;
     if (cfg.account_balance && el("riskAccountInput")) el("riskAccountInput").value = cfg.account_balance;
     if (cfg.risk_pct && el("riskPctInput")) el("riskPctInput").value = cfg.risk_pct;
+    if (cfg.claude_base_url && el("claudeBaseUrlInput")) el("claudeBaseUrlInput").value = cfg.claude_base_url;
+    if (cfg.claude_model && el("claudeModelSelect")) el("claudeModelSelect").value = cfg.claude_model;
+    if (el("claudeKeyStatusBadge")) {
+      el("claudeKeyStatusBadge").textContent = cfg.has_claude_key ? "CLAUDE ACTIVE" : "OPTIONAL";
+    }
     hasLocalSavedConfig = true;
     return true;
   } catch (e) {
@@ -2070,25 +2075,29 @@ function initEventListeners() {
     });
   }
 
-  // Save Gemini Key & Price Alert (with Confirmation Dialog)
-  if (el("saveGeminiKeyBtn")) {
-    el("saveGeminiKeyBtn").addEventListener("click", () => {
-      const k = el("geminiKeyInput")?.value.trim() || "";
+  // Save Claude API Key, Base URL & Model (with Confirmation Dialog)
+  if (el("saveClaudeKeyBtn")) {
+    el("saveClaudeKeyBtn").addEventListener("click", () => {
+      const k = el("claudeKeyInput")?.value.trim() || "";
+      const baseUrl = el("claudeBaseUrlInput")?.value.trim() || "https://api.laalaa.me";
+      const model = el("claudeModelSelect")?.value || "claude-sonnet-5-5";
       openConfirmDialog({
-        title: "Update Cloud AI Key",
-        badge: "GEMINI ARGON",
+        title: "Update Cloud AI (Claude API)",
+        badge: "CLAUDE API",
         desc: k
-          ? "Save your Gemini 4 Argon API key for cloud LLM inference?"
-          : "Clear saved API key and use the built-in 3-Agent Quant Committee?",
-        meta: k ? `Key prefix: ${k.slice(0, 6)}...` : "Mode: Local 3-Agent Committee",
-        confirmLabel: "Save Key ↵",
+          ? "Save your Claude API key, Base URL, and model for 3-Agent Debate inference?"
+          : "Update Claude Base URL & Model (or clear API key if left blank)?",
+        meta: `Base URL: ${baseUrl}\nModel: ${model}${k ? `\nKey prefix: ${k.slice(0, 7)}...` : ""}`,
+        confirmLabel: "Save Claude API ↵",
         onConfirm: async () => {
+          const payload = { claude_base_url: baseUrl, claude_model: model };
+          if (k) payload.claude_api_key = k;
           await fetch(`${API_BASE}/api/settings`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ gemini_api_key: k })
+            body: JSON.stringify(payload)
           });
-          showToast("Updated AI Committee settings");
+          showToast(`Saved Claude API (${model})`);
           fetchFullDashboard();
         }
       });

@@ -1304,6 +1304,118 @@ def compute_signal_at(
     }
 
 
+def _extract_json_object(raw_text):
+    """Extracts a JSON object from LLM text (handles markdown code fences)."""
+    if not raw_text:
+        return None
+    txt = raw_text.strip()
+    if txt.startswith("```"):
+        txt = re.sub(r"^```[a-zA-Z0-9_-]*\s*", "", txt)
+        txt = re.sub(r"\s*```$", "", txt).strip()
+    try:
+        return json.loads(txt)
+    except Exception:
+        m = re.search(r"\{.*\}", txt, flags=re.DOTALL)
+        if m:
+            try:
+                return json.loads(m.group(0))
+            except Exception:
+                pass
+    return None
+
+
+def _call_claude_api(api_key, base_url, model, prompt_payload):
+    """
+    Calls Claude API (supports custom Base URL such as https://api.laalaa.me)
+    using Anthropic /v1/messages first, with OpenAI-compatible /v1/chat/completions fallback.
+    """
+    cache_key = f"claude_{model}_{prompt_payload['symbol']}_{prompt_payload['timeframe']}_{prompt_payload['trading_style']}_{prompt_payload['candle_ts']}_{prompt_payload['raw_direction']}"
+    if cache_key in _GEMINI_AGENT_CACHE:
+        return _GEMINI_AGENT_CACHE[cache_key]
+
+    base = (base_url or "https://api.laalaa.me").strip().rstrip("/")
+    model_id = (model or "claude-sonnet-5-5").strip()
+    skills_text = "\n\n".join(sk["content"] for sk in load_trading_skills())
+    sys_prompt = (
+        "You are the Chief Institutional Portfolio Manager & Risk Gatekeeper running a 3-Agent Debate "
+        "(Bullish Technical Analyst vs. Bearish Macro/Risk Critic vs. Chief Risk Officer Judge). "
+        "Follow these loaded SKILL.md playbooks:\n\n"
+        f"{skills_text}\n\n"
+        "Respond ONLY with a valid JSON object (no markdown) containing keys: "
+        "verdict (APPROVED_HIGH_CONVICTION, APPROVED_CAUTIOUS, VETOED_TO_WAIT, or WATCHING_SWING_ZONE), "
+        "final_direction (BUY, SELL, or WAIT), adjusted_confidence (integer 35..98), "
+        "technical_agent_note, macro_agent_note, risk_officer_note, bull_case, bear_case, executive_summary."
+    )
+    user_msg = f"Evaluate this live trading setup and return strict JSON:\n{json.dumps(prompt_payload)}"
+
+    # 1. Try Anthropic /v1/messages
+    try:
+        msg_body = {
+            "model": model_id,
+            "max_tokens": 600,
+            "system": sys_prompt,
+            "messages": [{"role": "user", "content": user_msg}],
+        }
+        req = urllib.request.Request(
+            f"{base}/v1/messages",
+            data=json.dumps(msg_body).encode("utf-8"),
+            headers={
+                "x-api-key": api_key.strip(),
+                "Authorization": f"Bearer {api_key.strip()}",
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=12, context=_ssl_context()) as r:
+            resp = json.loads(r.read().decode("utf-8"))
+            text_out = ""
+            for blk in resp.get("content", []):
+                if blk.get("type") == "text" and blk.get("text"):
+                    text_out += blk["text"]
+            parsed = _extract_json_object(text_out)
+            if parsed:
+                _GEMINI_AGENT_CACHE[cache_key] = parsed
+                return parsed
+    except Exception:
+        pass
+
+    # 2. Fallback to OpenAI-compatible /v1/chat/completions
+    try:
+        oai_body = {
+            "model": model_id,
+            "max_tokens": 600,
+            "messages": [
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": user_msg},
+            ],
+        }
+        req = urllib.request.Request(
+            f"{base}/v1/chat/completions",
+            data=json.dumps(oai_body).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {api_key.strip()}",
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=12, context=_ssl_context()) as r:
+            resp = json.loads(r.read().decode("utf-8"))
+            choices = resp.get("choices", [])
+            if choices:
+                text_out = choices[0].get("message", {}).get("content", "")
+                parsed = _extract_json_object(text_out)
+                if parsed:
+                    _GEMINI_AGENT_CACHE[cache_key] = parsed
+                    return parsed
+    except Exception:
+        pass
+
+    return None
+
+
 def _call_gemini_argon_api(api_key, prompt_payload):
     """
     Calls Google Gemini 4 Argon (`gemini-4-argon`) via the official Interactions API
@@ -1645,9 +1757,13 @@ def run_ai_agent_layer(
         f"RSI14 at {rsi14:.1f}, {htf_bear_count} bearish TF votes. {event_str}"
     )
 
-    # Optional Live Gemini 4 Argon API upgrade if user configured GEMINI_API_KEY
-    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or get_setting("gemini_api_key", "")
-    if api_key and len(api_key.strip()) > 15:
+    # Optional Live Cloud AI Upgrade: Claude API (primary) -> Gemini 4 Argon (fallback)
+    claude_key = os.environ.get("CLAUDE_API_KEY") or get_setting("claude_api_key", "")
+    claude_base = os.environ.get("CLAUDE_BASE_URL") or get_setting("claude_base_url", "https://api.laalaa.me")
+    claude_model = os.environ.get("CLAUDE_MODEL") or get_setting("claude_model", "claude-sonnet-5-5")
+    gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or get_setting("gemini_api_key", "")
+
+    if (claude_key and len(claude_key.strip()) > 10) or (gemini_key and len(gemini_key.strip()) > 15):
         try:
             prompt_payload = {
                 "symbol": symbol,
@@ -1675,9 +1791,19 @@ def run_ai_agent_layer(
                 "fundamental_score": f_score,
                 "headlines": [h["title"] for h in fundamentals.get("headlines", [])[:5]],
             }
-            llm_res = _call_gemini_argon_api(api_key, prompt_payload)
+            llm_res = None
+            used_provider = ""
+            if claude_key and len(claude_key.strip()) > 10:
+                llm_res = _call_claude_api(claude_key, claude_base, claude_model, prompt_payload)
+                if llm_res:
+                    used_provider = f"Claude API ({claude_model})"
+            if not llm_res and gemini_key and len(gemini_key.strip()) > 15:
+                llm_res = _call_gemini_argon_api(gemini_key, prompt_payload)
+                if llm_res:
+                    used_provider = "Gemini 4 Argon Live API"
+
             if llm_res:
-                engine_label = "Gemini 4 Argon + SKILL.md 3-Agent Debate"
+                engine_label = f"{used_provider} + SKILL.md 3-Agent Debate"
                 verdict = llm_res.get("verdict", verdict)
                 if llm_res.get("final_direction") in ("BUY", "SELL", "WAIT"):
                     final_dir = llm_res["final_direction"]
@@ -1689,7 +1815,7 @@ def run_ai_agent_layer(
                 bull_case = llm_res.get("bull_case", bull_case)
                 bear_case = llm_res.get("bear_case", bear_case)
                 exec_summary = llm_res.get("executive_summary", exec_summary)
-                verdict_badge = f"GEMINI 4 ARGON: {verdict.replace('_', ' ')}"
+                verdict_badge = f"{used_provider.upper()}: {verdict.replace('_', ' ')}"
         except Exception:
             pass
 
@@ -2079,6 +2205,9 @@ def get_saved_trading_config():
         "account_balance": _flt("saved_account_balance", 10000.0),
         "risk_pct": _flt("saved_risk_pct", 1.0),
         "risk_usd": max(1.0, _flt("saved_risk_usd", 10.0)),
+        "claude_base_url": s.get("claude_base_url", "https://api.laalaa.me"),
+        "claude_model": s.get("claude_model", "claude-sonnet-5-5"),
+        "has_claude_key": bool(s.get("claude_api_key", "").strip()),
         "updated_at": s.get("saved_config_updated_at", ""),
     }
 
