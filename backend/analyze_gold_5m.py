@@ -55,12 +55,88 @@ TV_INTERVAL_MAP = {
     "1d": "1D",
 }
 
-# Trading Styles Configuration — SWING TRADE is the Default & Specialized Mode
+# Top 12 Institutional Global Assets (OANDA exclusive for Gold XAU/USD + Silver, Crypto, Indices, Forex, Top Stocks)
+SUPPORTED_ASSETS = {
+    "OANDA:XAUUSD":   {"symbol": "OANDA:XAUUSD",   "name": "Gold Spot (XAU/USD · OANDA)",   "short": "XAU/USD", "category": "Metals",  "decimals": 2},
+    "OANDA:XAGUSD":   {"symbol": "OANDA:XAGUSD",   "name": "Silver Spot (XAG/USD · OANDA)", "short": "XAG/USD", "category": "Metals",  "decimals": 3},
+    "BINANCE:BTCUSDT":{"symbol": "BINANCE:BTCUSDT","name": "Bitcoin (BTC/USDT)",            "short": "BTC/USD", "category": "Crypto",  "decimals": 2},
+    "BINANCE:ETHUSDT":{"symbol": "BINANCE:ETHUSDT","name": "Ethereum (ETH/USDT)",           "short": "ETH/USD", "category": "Crypto",  "decimals": 2},
+    "BINANCE:SOLUSDT":{"symbol": "BINANCE:SOLUSDT","name": "Solana (SOL/USDT)",             "short": "SOL/USD", "category": "Crypto",  "decimals": 2},
+    "OANDA:SPX500USD":{"symbol": "OANDA:SPX500USD","name": "S&P 500 Index (SPX500)",        "short": "SPX500",  "category": "Indices", "decimals": 2},
+    "OANDA:NAS100USD":{"symbol": "OANDA:NAS100USD","name": "Nasdaq 100 Tech (NAS100)",      "short": "NAS100",  "category": "Indices", "decimals": 2},
+    "OANDA:EURUSD":   {"symbol": "OANDA:EURUSD",   "name": "EUR/USD Major Forex",           "short": "EUR/USD", "category": "Forex",   "decimals": 4},
+    "OANDA:GBPUSD":   {"symbol": "OANDA:GBPUSD",   "name": "GBP/USD Cable Forex",           "short": "GBP/USD", "category": "Forex",   "decimals": 4},
+    "OANDA:USDJPY":   {"symbol": "OANDA:USDJPY",   "name": "USD/JPY Yen Forex",             "short": "USD/JPY", "category": "Forex",   "decimals": 3},
+    "NASDAQ:NVDA":    {"symbol": "NASDAQ:NVDA",    "name": "NVIDIA Corp (NVDA)",            "short": "NVDA",    "category": "Stocks",  "decimals": 2},
+    "NASDAQ:AAPL":    {"symbol": "NASDAQ:AAPL",    "name": "Apple Inc (AAPL)",              "short": "AAPL",    "category": "Stocks",  "decimals": 2},
+}
+
+# Institutional Trading Strategies (SMC, ICT, Trend Pullback, Fib Golden Pocket, Wyckoff VSA, Bollinger, Breakout, Flexible)
+TRADING_STRATEGIES = {
+    "FLEXIBLE_HYBRID": {
+        "code": "FLEXIBLE_HYBRID",
+        "name": "Flexible AI Hybrid (All Strategies + Custom Rules)",
+        "short": "Flexible AI",
+        "badge": "ADAPTIVE AI",
+        "description": "Runs SMC, ICT, Trend Pullback, Golden Pocket, Wyckoff VSA & Breakout in parallel and selects the highest-conviction setup matching your savedSL/TP and confidence filters.",
+    },
+    "SMC_ORDER_BLOCK": {
+        "code": "SMC_ORDER_BLOCK",
+        "name": "SMC (Break of Structure + Order Block + FVG)",
+        "short": "SMC (BOS/OB/FVG)",
+        "badge": "SMART MONEY",
+        "description": "Institutional Smart Money Concepts: Detects Break of Structure (BOS/CHoCH), unmitigated 3-candle Fair Value Gaps (FVG), and institutional Order Block (OB) mitigation.",
+    },
+    "ICT_SILVER_BULLET": {
+        "code": "ICT_SILVER_BULLET",
+        "name": "ICT (Liquidity Sweep + Displacement + OTE)",
+        "short": "ICT Silver Bullet",
+        "badge": "ICT CONCEPTS",
+        "description": "Inner Circle Trader methodology: Hunts Buy/Sell-Side Liquidity pools (Judas Sweep), requires displacement impulse + Optimal Trade Entry (OTE 61.8%–79% Fib / FVG).",
+    },
+    "TREND_PULLBACK": {
+        "code": "TREND_PULLBACK",
+        "name": "Trend Pullback (EMA 9/21/50/200 Ribbon)",
+        "short": "Trend Pullback",
+        "badge": "PRO TREND",
+        "description": "Classic institutional trend continuation: Enters when price pulls back into stacked EMA 9/21/50 dynamic support/resistance with RSI(14) & MACD confirmation.",
+    },
+    "FIB_GOLDEN_POCKET": {
+        "code": "FIB_GOLDEN_POCKET",
+        "name": "Fibonacci Golden Pocket (38.2%–61.8% Wave)",
+        "short": "Fib Golden Pocket",
+        "badge": "HARMONIC WAVE",
+        "description": "Measures multi-bar swing impulse waves and enters on institutional rejection inside the 38.2%–61.8% Fibonacci Golden Pocket retracement zone.",
+    },
+    "WYCKOFF_VSA": {
+        "code": "WYCKOFF_VSA",
+        "name": "Wyckoff Spring / Upthrust + Volume Spread (VSA)",
+        "short": "Wyckoff & VSA",
+        "badge": "WYCKOFF VSA",
+        "description": "Detects accumulation Springs (false breakdown below range support closing back inside on high volume/wick) and distribution Upthrusts (UTAD).",
+    },
+    "BOLLINGER_MEAN_REV": {
+        "code": "BOLLINGER_MEAN_REV",
+        "name": "Bollinger 2σ + RSI Exhaustion Reversal",
+        "short": "Bollinger Reversal",
+        "badge": "MEAN REVERSION",
+        "description": "Statistical mean-reversion: Captures exhaustion wicks outside 2.0σ Bollinger Bands paired with oversold (<32) or overbought (>68) RSI hooks.",
+    },
+    "TURTLE_BREAKOUT": {
+        "code": "TURTLE_BREAKOUT",
+        "name": "Donchian & Volatility Squeeze Breakout",
+        "short": "Momentum Breakout",
+        "badge": "BREAKOUT",
+        "description": "Captures high-velocity expansion candles breaking out of N-bar Donchian structure highs/lows with stacked EMAs.",
+    },
+}
+
+# Trading Styles Configuration (User's last choice is persisted in DB & localStorage)
 TRADING_STYLES = {
     "SWING": {
         "code": "SWING",
-        "name": "Swing Trade (Pro Default)",
-        "badge": "SWING SPECIALIST",
+        "name": "Swing Trade",
+        "badge": "SWING MODE",
         "default_tf": "1h",
         "recommended_tfs": ["1h", "4h", "15m"],
         "mtf_list": ["15m", "1h", "4h", "1d"],
@@ -71,9 +147,8 @@ TRADING_STYLES = {
         "swing_lookback": 48,
         "hold_duration_label": "4 Hours – 3 Days (Multi-Session Swing Wave)",
         "description": (
-            "Specialized Institutional Swing Strategy: Targets high-R:R multi-session Gold waves using "
-            "EMA 21/50/200 trend structure, 48-bar Fibonacci Golden Pocket (38.2%–61.8%) pullbacks, "
-            "and 4H/Daily confluence with wider 1.5x ATR stops and 2.5x / 4.0x ATR swing targets."
+            "Institutional Swing Mode: Targets multi-session waves using "
+            "EMA 21/50/200 structure, 48-bar lookback zones, and 1.5x / 2.5x / 4.0x ATR targets."
         ),
     },
     "INTRADAY": {
@@ -259,15 +334,17 @@ def fetch_tradingview_candles(symbol="OANDA:XAUUSD", interval="1h", n_bars=450):
                             ts = int(v[0])
                             dt_utc = datetime.fromtimestamp(ts, tz=timezone.utc)
                             dt_local = datetime.fromtimestamp(ts, tz=TZ_UTC7)
+                            c_val = float(v[4])
+                            dec = 4 if c_val < 10 else (3 if c_val < 100 else 2)
                             bars.append(
                                 {
                                     "timestamp": ts,
                                     "time": dt_utc.strftime("%Y-%m-%d %H:%M UTC"),
                                     "time_local": dt_local.strftime("%Y-%m-%d %H:%M UTC+7"),
-                                    "open": round(float(v[1]), 2),
-                                    "high": round(float(v[2]), 2),
-                                    "low": round(float(v[3]), 2),
-                                    "close": round(float(v[4]), 2),
+                                    "open": round(float(v[1]), dec),
+                                    "high": round(float(v[2]), dec),
+                                    "low": round(float(v[3]), dec),
+                                    "close": round(c_val, dec),
                                     "volume": round(float(v[5]) if len(v) > 5 else 0.0, 1),
                                 }
                             )
@@ -465,9 +542,10 @@ def fetch_fundamental_analysis(force=False):
 
 def fetch_live_tv_tick(symbol="OANDA:XAUUSD"):
     """
-    Fast (<150ms) live tick & multi-timeframe summary from TradingView Scanner API.
+    Fast (<150ms) live tick & multi-timeframe summary from TradingView Global Scanner API.
+    Supports OANDA:XAUUSD (exclusive XAU broker feed) + top global Crypto, Indices, Forex, and Stocks.
     """
-    tv_url = "https://scanner.tradingview.com/cfd/scan"
+    tv_url = "https://scanner.tradingview.com/global/scan"
     cols = [
         "close", "open", "high", "low", "change", "change_abs",
         "close|1", "open|1", "high|1", "low|1", "RSI|1", "Recommend.All|1",
@@ -477,10 +555,11 @@ def fetch_live_tv_tick(symbol="OANDA:XAUUSD"):
         "close|240", "RSI|240", "Recommend.All|240",
         "RSI", "Recommend.All",
     ]
+    tickers = list(SUPPORTED_ASSETS.keys()) + ["TVC:DXY"]
     payload = json.dumps(
         {
             "symbols": {
-                "tickers": ["FX:XAUUSD", "OANDA:XAUUSD", "FOREXCOM:XAUUSD", "TVC:DXY"],
+                "tickers": tickers,
                 "query": {"types": []},
             },
             "columns": cols,
@@ -503,14 +582,21 @@ def fetch_live_tv_tick(symbol="OANDA:XAUUSD"):
     for item in resp.get("data", []):
         sym = item["s"]
         d = dict(zip(cols, item["d"]))
+        c_val = float(d.get("close") or 0)
+        asset_meta = SUPPORTED_ASSETS.get(sym, {})
+        dec = asset_meta.get("decimals", 4 if 0 < c_val < 10 else (3 if 0 < c_val < 100 else 2))
         brokers[sym] = {
             "symbol": sym,
-            "price": round(float(d.get("close") or 0), 2),
-            "day_open": round(float(d.get("open") or 0), 2),
-            "day_high": round(float(d.get("high") or 0), 2),
-            "day_low": round(float(d.get("low") or 0), 2),
+            "name": asset_meta.get("name", sym),
+            "short": asset_meta.get("short", sym.split(":")[-1]),
+            "category": asset_meta.get("category", "Macro"),
+            "decimals": dec,
+            "price": round(c_val, dec),
+            "day_open": round(float(d.get("open") or 0), dec),
+            "day_high": round(float(d.get("high") or 0), dec),
+            "day_low": round(float(d.get("low") or 0), dec),
             "change_pct": round(float(d.get("change") or 0), 2),
-            "change_abs": round(float(d.get("change_abs") or 0), 2),
+            "change_abs": round(float(d.get("change_abs") or 0), dec),
             "tv_recommend_1m": round(float(d.get("Recommend.All|1") or 0), 3),
             "tv_recommend_5m": round(float(d.get("Recommend.All|5") or 0), 3),
             "tv_recommend_15m": round(float(d.get("Recommend.All|15") or 0), 3),
@@ -532,6 +618,7 @@ def fetch_live_tv_tick(symbol="OANDA:XAUUSD"):
         "timestamp_local": now_local.strftime("%H:%M:%S UTC+7"),
         "active": selected,
         "brokers": brokers,
+        "supported_assets": SUPPORTED_ASSETS,
     }
 
 
@@ -588,14 +675,15 @@ def macd_series(closes, fast=12, slow=26, sig=9):
 
 def bollinger_series(closes, period=20, num_std=2.0):
     upper, mid, lower = [], [], []
+    dec = 4 if (closes and closes[-1] < 10) else (3 if (closes and closes[-1] < 100) else 2)
     for i in range(len(closes)):
         window = closes[max(0, i - period + 1) : i + 1]
         mean = sum(window) / len(window)
         variance = sum((x - mean) ** 2 for x in window) / len(window)
         sd = math.sqrt(variance)
-        mid.append(round(mean, 2))
-        upper.append(round(mean + num_std * sd, 2))
-        lower.append(round(mean - num_std * sd, 2))
+        mid.append(round(mean, dec))
+        upper.append(round(mean + num_std * sd, dec))
+        lower.append(round(mean - num_std * sd, dec))
     return upper, mid, lower
 
 
@@ -610,12 +698,13 @@ def atr_series(candles, period=14):
         trs.append(max(h - l, abs(h - pc), abs(l - pc)))
     out = []
     val = trs[0]
+    min_floor = max(candles[-1]["close"] * 0.0002, 0.0001)
     for i, tr in enumerate(trs):
         if i < period:
             val = sum(trs[: i + 1]) / (i + 1)
         else:
             val = (val * (period - 1) + tr) / period
-        out.append(max(val, 0.35))
+        out.append(max(val, min_floor))
     return out
 
 
@@ -632,21 +721,28 @@ def compute_signal_at(
     bb_l=None,
     ema200_s=None,
     trading_style="SWING",
+    strategy="FLEXIBLE_HYBRID",
     sl_mult=None,
     tp1_mult=None,
     tp2_mult=None,
+    min_confidence=70,
     fundamental_bias="NEUTRAL",
     fundamental_score=0,
 ):
     """
-    Multi-Style Institutional Strategy Engine with Swing Trade Specialization:
-    - SWING (Default Specialty): Uses 48-bar Swing Structure, Fibonacci Golden Pocket (38.2%–61.8%),
-      EMA 21/50/200 institutional trend alignment, and wider 1.5x / 2.5x / 4.0x ATR targets.
-    - INTRADAY: Session trend pullbacks & liquidity sweeps (1.2x / 1.8x / 3.0x ATR).
-    - SCALPING: Fast 1m/5m EMA 9/21 momentum bursts (1.0x / 1.5x / 2.0x ATR).
-    - POSITION: Macro 4H/Daily trend waves (1.8x / 3.0x / 5.0x ATR).
+    Multi-Style & Multi-Strategy Institutional Signal Engine:
+    Supports 4 Trading Styles (SCALPING, INTRADAY, SWING, POSITION) and 8 Selectable Bot Strategies:
+    1. FLEXIBLE_HYBRID: Evaluates all 7 institutional algorithms in parallel & picks highest conviction >= min_confidence
+    2. SMC_ORDER_BLOCK: Smart Money Concepts (BOS/CHoCH + 3-bar Fair Value Gap FVG + Order Block OB mitigation)
+    3. ICT_SILVER_BULLET: Inner Circle Trader (Liquidity Pool Judas Sweep + Displacement + OTE 61.8%-79% Fib)
+    4. TREND_PULLBACK: EMA 9/21/50/200 Ribbon dynamic pullback + RSI/MACD impulse
+    5. FIB_GOLDEN_POCKET: 38.2%-61.8% Fibonacci Golden Pocket wave rejection
+    6. WYCKOFF_VSA: Wyckoff Spring / Upthrust (UTAD) false-breakout rejection + Volume Spread Analysis
+    7. BOLLINGER_MEAN_REV: 2.0σ Bollinger Band exhaustion pierce + RSI hook reversal
+    8. TURTLE_BREAKOUT: Donchian N-bar volatility squeeze breakout with stacked EMAs
     """
     style_cfg = TRADING_STYLES.get(trading_style, TRADING_STYLES["SWING"])
+    strat_cfg = TRADING_STRATEGIES.get(strategy, TRADING_STRATEGIES["FLEXIBLE_HYBRID"])
     if sl_mult is None:
         sl_mult = style_cfg["sl_mult"]
     if tp1_mult is None:
@@ -659,10 +755,12 @@ def compute_signal_at(
     c = candles[idx]
     prev_c = candles[max(0, idx - 1)]
     prev2_c = candles[max(0, idx - 2)]
+    prev3_c = candles[max(0, idx - 3)]
     price = c["close"]
     open_p = c["open"]
     high_p = c["high"]
     low_p = c["low"]
+    dec = 4 if price < 10 else (3 if price < 100 else 2)
 
     ema9 = ema9_s[idx]
     ema21 = ema21_s[idx]
@@ -671,192 +769,351 @@ def compute_signal_at(
     prev_ema9 = ema9_s[max(0, idx - 1)]
     rsi14 = rsi_s[idx]
     prev_rsi = rsi_s[max(0, idx - 1)]
-    atr14 = max(atr_s[idx], 0.4)
+    atr14 = max(atr_s[idx], max(price * 0.0002, 0.0001))
     hist = macd_h[idx]
     prev_hist = macd_h[max(0, idx - 1)]
 
     window_start = max(0, idx - lookback)
     recent_high = max(x["high"] for x in candles[window_start : idx + 1])
     recent_low = min(x["low"] for x in candles[window_start : idx + 1])
-    swing_range = max(recent_high - recent_low, 0.01)
+    swing_range = max(recent_high - recent_low, atr14 * 0.1)
 
-    # Fibonacci Golden Pocket (38.2% - 61.8% retracement) for Swing Trading
+    # Prior structure window (excluding current bar) for sweeps & breakouts
+    prior_slice = candles[max(0, idx - max(12, lookback // 2)) : idx] if idx >= 3 else [c]
+    prior_high = max(x["high"] for x in prior_slice)
+    prior_low = min(x["low"] for x in prior_slice)
+
+    # Fibonacci Golden Pocket (38.2% - 61.8%) & ICT OTE (61.8% - 79.0%)
     fib_382_bull = recent_high - 0.382 * swing_range
     fib_500_bull = recent_high - 0.500 * swing_range
     fib_618_bull = recent_high - 0.618 * swing_range
+    fib_790_bull = recent_high - 0.790 * swing_range
     fib_382_bear = recent_low + 0.382 * swing_range
     fib_618_bear = recent_low + 0.618 * swing_range
+    fib_790_bear = recent_low + 0.790 * swing_range
 
-    in_bull_golden_zone = (fib_618_bull - 0.35 * atr14) <= low_p <= (fib_382_bull + 0.35 * atr14)
-    in_bear_golden_zone = (fib_382_bear - 0.35 * atr14) <= high_p <= (fib_618_bear + 0.35 * atr14)
+    in_bull_golden_zone = (fib_618_bull - 0.45 * atr14) <= low_p <= (fib_382_bull + 0.45 * atr14)
+    in_bear_golden_zone = (fib_382_bear - 0.45 * atr14) <= high_p <= (fib_618_bear + 0.45 * atr14)
+    in_bull_ote = (fib_790_bull - 0.35 * atr14) <= low_p <= (fib_618_bull + 0.45 * atr14)
+    in_bear_ote = (fib_618_bear - 0.45 * atr14) <= high_p <= (fib_790_bear + 0.35 * atr14)
 
-    bar_range = max(high_p - low_p, 0.01)
+    bar_range = max(high_p - low_p, atr14 * 0.05)
     body = abs(price - open_p)
     body_ratio = body / bar_range
     lower_wick = min(price, open_p) - low_p
     upper_wick = high_p - max(price, open_p)
 
-    bull_candle = (price > open_p and body_ratio >= 0.28) or (price >= open_p and lower_wick >= 0.45 * bar_range)
-    bear_candle = (price < open_p and body_ratio >= 0.28) or (price <= open_p and upper_wick >= 0.45 * bar_range)
+    bull_candle = (price > open_p and body_ratio >= 0.25) or (price >= open_p and lower_wick >= 0.42 * bar_range)
+    bear_candle = (price < open_p and body_ratio >= 0.25) or (price <= open_p and upper_wick >= 0.42 * bar_range)
+    bull_displacement = (price > open_p and body >= 0.45 * atr14) or (
+        prev_c["close"] > prev_c["open"] and abs(prev_c["close"] - prev_c["open"]) >= 0.45 * atr14 and bull_candle
+    )
+    bear_displacement = (price < open_p and body >= 0.45 * atr14) or (
+        prev_c["close"] < prev_c["open"] and abs(prev_c["close"] - prev_c["open"]) >= 0.45 * atr14 and bear_candle
+    )
 
-    # Check 1: EMA Trend Structure (Swing & Position emphasize EMA 21/50/200; Scalp/Intraday emphasize EMA 9/21/50)
+    # EMA Trend Structure
     if trading_style in ("SWING", "POSITION"):
-        uptrend_structure = (ema21 >= ema50 - 0.25 * atr14) and (price >= ema50 - 0.3 * atr14) and (ema9 >= ema21 - 0.2 * atr14)
-        downtrend_structure = (ema21 <= ema50 + 0.25 * atr14) and (price <= ema50 + 0.3 * atr14) and (ema9 <= ema21 + 0.2 * atr14)
+        uptrend_structure = (ema21 >= ema50 - 0.25 * atr14) and (price >= ema50 - 0.35 * atr14) and (ema9 >= ema21 - 0.25 * atr14)
+        downtrend_structure = (ema21 <= ema50 + 0.25 * atr14) and (price <= ema50 + 0.35 * atr14) and (ema9 <= ema21 + 0.25 * atr14)
     else:
-        uptrend_structure = ema9 >= ema21 and price > ema21 and ema21 >= ema50 - 0.3 * atr14
-        downtrend_structure = ema9 <= ema21 and price < ema21 and ema21 <= ema50 + 0.3 * atr14
+        uptrend_structure = ema9 >= ema21 - 0.1 * atr14 and price > ema21 - 0.15 * atr14 and ema21 >= ema50 - 0.35 * atr14
+        downtrend_structure = ema9 <= ema21 + 0.1 * atr14 and price < ema21 + 0.15 * atr14 and ema21 <= ema50 + 0.35 * atr14
 
-    # Check 2: Pullback to EMA / Fibonacci Golden Zone
     touched_buy_zone = (
-        low_p <= ema9 + 0.4 * atr14
-        or prev_c["low"] <= ema9_s[max(0, idx - 1)] + 0.4 * atr14
-        or prev2_c["low"] <= ema21_s[max(0, idx - 2)] + 0.45 * atr14
-        or (trading_style in ("SWING", "POSITION") and in_bull_golden_zone)
-    ) and (price - ema21) <= 1.8 * atr14
+        low_p <= ema9 + 0.45 * atr14
+        or prev_c["low"] <= ema9_s[max(0, idx - 1)] + 0.45 * atr14
+        or prev2_c["low"] <= ema21_s[max(0, idx - 2)] + 0.5 * atr14
+        or in_bull_golden_zone
+    ) and (price - ema21) <= 2.0 * atr14
 
     touched_sell_zone = (
-        high_p >= ema9 - 0.4 * atr14
-        or prev_c["high"] >= ema9_s[max(0, idx - 1)] - 0.4 * atr14
-        or prev2_c["high"] >= ema21_s[max(0, idx - 2)] - 0.45 * atr14
-        or (trading_style in ("SWING", "POSITION") and in_bear_golden_zone)
-    ) and (ema21 - price) <= 1.8 * atr14
+        high_p >= ema9 - 0.45 * atr14
+        or prev_c["high"] >= ema9_s[max(0, idx - 1)] - 0.45 * atr14
+        or prev2_c["high"] >= ema21_s[max(0, idx - 2)] - 0.5 * atr14
+        or in_bear_golden_zone
+    ) and (ema21 - price) <= 2.0 * atr14
 
-    # Check 3: Momentum & Oscillator Confirmation
-    bull_momentum = (hist >= prev_hist or hist > 0) and (42 <= rsi14 <= 69) and (price >= prev_c["close"])
-    bear_momentum = (hist <= prev_hist or hist < 0) and (31 <= rsi14 <= 58) and (price <= prev_c["close"])
+    bull_momentum = (hist >= prev_hist or hist > 0) and (38 <= rsi14 <= 70) and (price >= prev_c["close"])
+    bear_momentum = (hist <= prev_hist or hist < 0) and (30 <= rsi14 <= 62) and (price <= prev_c["close"])
 
-    # Check 4: Liquidity Sweep Reversal Confirmation
+    # SMC: 3-candle Fair Value Gap (FVG) & Order Block (OB) + Break of Structure (BOS)
+    bull_fvg = False
+    bear_fvg = False
+    for k in range(max(2, idx - 6), idx + 1):
+        if candles[k]["low"] > candles[k - 2]["high"]:
+            bull_fvg = True
+        if candles[k]["high"] < candles[k - 2]["low"]:
+            bear_fvg = True
+
+    smc_bull_bos = (price > prev_c["high"] or ema9 > ema21) and (ema21 >= ema50 - 0.35 * atr14)
+    smc_bear_bos = (price < prev_c["low"] or ema9 < ema21) and (ema21 <= ema50 + 0.35 * atr14)
+    smc_bull_ob = (in_bull_golden_zone or touched_buy_zone or bull_fvg) and bull_candle and (bull_displacement or bull_momentum)
+    smc_bear_ob = (in_bear_golden_zone or touched_sell_zone or bear_fvg) and bear_candle and (bear_displacement or bear_momentum)
+
+    # ICT: Liquidity Sweep (Judas swing below prior low / equal lows or into OTE) + Displacement
+    ict_bull_sweep = (
+        low_p <= prior_low + 0.25 * atr14
+        or prev_c["low"] <= prior_low + 0.25 * atr14
+        or in_bull_ote
+        or (in_bull_golden_zone and lower_wick >= 0.30 * bar_range)
+    )
+    ict_bear_sweep = (
+        high_p >= prior_high - 0.25 * atr14
+        or prev_c["high"] >= prior_high - 0.25 * atr14
+        or in_bear_ote
+        or (in_bear_golden_zone and upper_wick >= 0.30 * bar_range)
+    )
+    ict_bull_ok = ict_bull_sweep and bull_candle and price > prev_c["close"] and rsi14 >= prev_rsi
+    ict_bear_ok = ict_bear_sweep and bear_candle and price < prev_c["close"] and rsi14 <= prev_rsi
+
+    # Wyckoff Spring / Upthrust (UTAD) & Volume Spread Analysis (VSA)
+    avg_vol = sum(x.get("volume", 1.0) for x in prior_slice) / max(len(prior_slice), 1)
+    vol_ratio = (c.get("volume", 1.0) / avg_vol) if avg_vol > 0 else 1.0
+    wyckoff_spring = (
+        (low_p <= prior_low + 0.35 * atr14 or prev_c["low"] <= prior_low + 0.35 * atr14)
+        and price > prior_low
+        and bull_candle
+        and (lower_wick >= 0.30 * bar_range or vol_ratio >= 0.9 or rsi14 > prev_rsi)
+    )
+    wyckoff_utad = (
+        (high_p >= prior_high - 0.35 * atr14 or prev_c["high"] >= prior_high - 0.35 * atr14)
+        and price < prior_high
+        and bear_candle
+        and (upper_wick >= 0.30 * bar_range or vol_ratio >= 0.9 or rsi14 < prev_rsi)
+    )
+
+    # Bollinger 2.0σ + RSI Exhaustion Reversal
     bb_low_val = bb_l[idx] if bb_l else recent_low
     bb_high_val = bb_u[idx] if bb_u else recent_high
     prev_bb_low = bb_l[max(0, idx - 1)] if bb_l else recent_low
     prev_bb_high = bb_u[max(0, idx - 1)] if bb_u else recent_high
 
-    bull_sweep_confirmed = (
-        (low_p <= bb_low_val or prev_c["low"] <= prev_bb_low or prev_rsi <= 32 or rsi14 <= 32)
+    bb_bull_rev = (
+        (low_p <= bb_low_val + 0.15 * atr14 or prev_c["low"] <= prev_bb_low + 0.15 * atr14 or prev_rsi <= 35 or rsi14 <= 35)
         and bull_candle
         and price > prev_c["close"]
         and rsi14 > prev_rsi
     )
-    bear_sweep_confirmed = (
-        (high_p >= bb_high_val or prev_c["high"] >= prev_bb_high or prev_rsi >= 68 or rsi14 >= 68)
+    bb_bear_rev = (
+        (high_p >= bb_high_val - 0.15 * atr14 or prev_c["high"] >= prev_bb_high - 0.15 * atr14 or prev_rsi >= 65 or rsi14 >= 65)
         and bear_candle
         and price < prev_c["close"]
         and rsi14 < prev_rsi
     )
 
-    # Check 5: Structure Breakout
+    # Donchian / Turtle Structure Breakout
     brk_len = 12 if trading_style in ("SWING", "POSITION") else 8
     prev_brk_high = max(x["high"] for x in candles[max(0, idx - brk_len) : idx]) if idx >= 2 else high_p
     prev_brk_low = min(x["low"] for x in candles[max(0, idx - brk_len) : idx]) if idx >= 2 else low_p
     bull_breakout = (
-        ema9 > ema21 > ema50
+        ema9 >= ema21 >= ema50 - 0.2 * atr14
         and bull_candle
         and price > prev_brk_high
-        and body >= 0.50 * atr14
-        and 52 <= rsi14 <= 71
+        and body >= 0.40 * atr14
+        and 50 <= rsi14 <= 74
     )
     bear_breakout = (
-        ema9 < ema21 < ema50
+        ema9 <= ema21 <= ema50 + 0.2 * atr14
         and bear_candle
         and price < prev_brk_low
-        and body >= 0.50 * atr14
-        and 29 <= rsi14 <= 48
+        and body >= 0.40 * atr14
+        and 26 <= rsi14 <= 50
     )
 
-    direction = "WAIT"
-    signal_type = "WAIT"
-    signal = f"WAIT (Scanning {style_cfg['name']} Structure)"
-    base_conf = 42
-    reason = ""
+    # Evaluate individual strategy candidates: (direction, signal_type, signal_label, base_conf, reason)
+    candidates = {}
 
-    if uptrend_structure and touched_buy_zone and bull_candle and bull_momentum and ema9 >= prev_ema9 - 0.05 * atr14:
-        direction = "BUY"
-        signal_type = "SWING_GOLDEN_PULLBACK" if trading_style == "SWING" else "PRO_TREND_PULLBACK"
-        signal = f"BUY ({'Swing Fib/EMA Pullback' if trading_style == 'SWING' else 'Confirmed Trend Pullback'})"
-        base_conf = 84 if (trading_style == "SWING" and in_bull_golden_zone) else 82
-        reason = (
-            f"{style_cfg['name']} Pullback Confirmed: EMA21 ({ema21:.2f}) >= EMA50 ({ema50:.2f}), "
-            f"price rejected demand/Fibonacci zone (50% Fib: {fib_500_bull:.2f}) with bullish candle & rising RSI ({rsi14:.1f})."
+    # 1. TREND_PULLBACK
+    if uptrend_structure and touched_buy_zone and bull_candle and bull_momentum and ema9 >= prev_ema9 - 0.08 * atr14:
+        candidates["TREND_PULLBACK"] = (
+            "BUY",
+            "TREND_PULLBACK",
+            f"BUY ({style_cfg['code'].title()} EMA Trend Pullback)",
+            84,
+            f"Trend Pullback Confirmed: EMA21 ({ema21:.{dec}f}) >= EMA50 ({ema50:.{dec}f}), price rejected dynamic EMA support with bullish impulse & RSI {rsi14:.1f}.",
         )
-    elif downtrend_structure and touched_sell_zone and bear_candle and bear_momentum and ema9 <= prev_ema9 + 0.05 * atr14:
-        direction = "SELL"
-        signal_type = "SWING_GOLDEN_PULLBACK" if trading_style == "SWING" else "PRO_TREND_PULLBACK"
-        signal = f"SELL ({'Swing Fib/EMA Pullback' if trading_style == 'SWING' else 'Confirmed Trend Pullback'})"
-        base_conf = 84 if (trading_style == "SWING" and in_bear_golden_zone) else 82
-        reason = (
-            f"{style_cfg['name']} Pullback Confirmed: EMA21 ({ema21:.2f}) <= EMA50 ({ema50:.2f}), "
-            f"price rejected supply/Fibonacci zone (50% Fib: {fib_500_bull:.2f}) with bearish candle & falling RSI ({rsi14:.1f})."
+    elif downtrend_structure and touched_sell_zone and bear_candle and bear_momentum and ema9 <= prev_ema9 + 0.08 * atr14:
+        candidates["TREND_PULLBACK"] = (
+            "SELL",
+            "TREND_PULLBACK",
+            f"SELL ({style_cfg['code'].title()} EMA Trend Pullback)",
+            84,
+            f"Trend Pullback Confirmed: EMA21 ({ema21:.{dec}f}) <= EMA50 ({ema50:.{dec}f}), price rejected dynamic EMA supply with bearish impulse & RSI {rsi14:.1f}.",
         )
-    elif bull_sweep_confirmed:
-        direction = "BUY"
-        signal_type = "LIQUIDITY_SWEEP"
-        signal = f"BUY ({'Swing Demand Sweep' if trading_style == 'SWING' else 'Liquidity Sweep Reversal'})"
-        base_conf = 79
-        reason = (
-            f"Institutional Liquidity Sweep Confirmed: Lower band/swing low ({bb_low_val:.2f}) swept and rejected "
-            f"with bullish close ({price:.2f}) & RSI hook ({prev_rsi:.1f} → {rsi14:.1f})."
+
+    # 2. SMC_ORDER_BLOCK
+    if smc_bull_bos and smc_bull_ob:
+        candidates["SMC_ORDER_BLOCK"] = (
+            "BUY",
+            "SMC_ORDER_BLOCK",
+            f"BUY (SMC Bullish BOS + {'FVG' if bull_fvg else 'Order Block'})",
+            86 if bull_fvg else 83,
+            f"Smart Money Concepts (SMC) BUY: Bullish Break of Structure with {'3-bar Fair Value Gap (FVG) & ' if bull_fvg else ''}Order Block mitigation near {fib_500_bull:.{dec}f}.",
         )
-    elif bear_sweep_confirmed:
-        direction = "SELL"
-        signal_type = "LIQUIDITY_SWEEP"
-        signal = f"SELL ({'Swing Supply Sweep' if trading_style == 'SWING' else 'Liquidity Sweep Reversal'})"
-        base_conf = 79
-        reason = (
-            f"Institutional Liquidity Sweep Confirmed: Upper band/swing high ({bb_high_val:.2f}) swept and rejected "
-            f"with bearish close ({price:.2f}) & RSI hook ({prev_rsi:.1f} → {rsi14:.1f})."
+    elif smc_bear_bos and smc_bear_ob:
+        candidates["SMC_ORDER_BLOCK"] = (
+            "SELL",
+            "SMC_ORDER_BLOCK",
+            f"SELL (SMC Bearish BOS + {'FVG' if bear_fvg else 'Order Block'})",
+            86 if bear_fvg else 83,
+            f"Smart Money Concepts (SMC) SELL: Bearish Break of Structure with {'3-bar Fair Value Gap (FVG) & ' if bear_fvg else ''}Supply Order Block mitigation near {fib_500_bull:.{dec}f}.",
         )
-    elif bull_breakout:
-        direction = "BUY"
-        signal_type = "MOMENTUM_BREAKOUT"
-        signal = f"BUY ({'Swing Structure Breakout' if trading_style == 'SWING' else 'Institutional Breakout'})"
-        base_conf = 81
-        reason = (
-            f"Structure Breakout Confirmed: Stacked EMA 9/21/50 ribbon with expansion candle "
-            f"closing above {brk_len}-bar structure ({prev_brk_high:.2f}) and RSI at {rsi14:.1f}."
+
+    # 3. ICT_SILVER_BULLET
+    if ict_bull_ok and (bull_displacement or bull_fvg or in_bull_ote):
+        candidates["ICT_SILVER_BULLET"] = (
+            "BUY",
+            "ICT_SILVER_BULLET",
+            "BUY (ICT Liquidity Sweep + Displacement)",
+            85,
+            f"ICT Silver Bullet BUY: Sell-side liquidity swept near {prior_low:.{dec}f} / OTE ({fib_618_bull:.{dec}f}) followed by bullish displacement & RSI hook ({rsi14:.1f}).",
+        )
+    elif ict_bear_ok and (bear_displacement or bear_fvg or in_bear_ote):
+        candidates["ICT_SILVER_BULLET"] = (
+            "SELL",
+            "ICT_SILVER_BULLET",
+            "SELL (ICT Liquidity Sweep + Displacement)",
+            85,
+            f"ICT Silver Bullet SELL: Buy-side liquidity swept near {prior_high:.{dec}f} / OTE ({fib_618_bear:.{dec}f}) followed by bearish displacement & RSI hook ({rsi14:.1f}).",
+        )
+
+    # 4. FIB_GOLDEN_POCKET
+    if (in_bull_golden_zone or in_bull_ote) and bull_candle and (rsi14 >= prev_rsi or hist >= prev_hist):
+        candidates["FIB_GOLDEN_POCKET"] = (
+            "BUY",
+            "FIB_GOLDEN_POCKET",
+            "BUY (Fibonacci 38.2%–61.8% Golden Pocket)",
+            84 if uptrend_structure else 80,
+            f"Fibonacci Golden Pocket BUY: Price rejected the 38.2%–61.8% retracement zone ({fib_618_bull:.{dec}f}–{fib_382_bull:.{dec}f}) with bullish reversal candle.",
+        )
+    elif (in_bear_golden_zone or in_bear_ote) and bear_candle and (rsi14 <= prev_rsi or hist <= prev_hist):
+        candidates["FIB_GOLDEN_POCKET"] = (
+            "SELL",
+            "FIB_GOLDEN_POCKET",
+            "SELL (Fibonacci 38.2%–61.8% Golden Pocket)",
+            84 if downtrend_structure else 80,
+            f"Fibonacci Golden Pocket SELL: Price rejected the 38.2%–61.8% retracement zone ({fib_382_bear:.{dec}f}–{fib_618_bear:.{dec}f}) with bearish reversal candle.",
+        )
+
+    # 5. WYCKOFF_VSA
+    if wyckoff_spring:
+        candidates["WYCKOFF_VSA"] = (
+            "BUY",
+            "WYCKOFF_SPRING",
+            "BUY (Wyckoff Spring + VSA Demand)",
+            82,
+            f"Wyckoff Accumulation Spring Confirmed: False breakdown below support ({prior_low:.{dec}f}) rejected back inside structure (Vol {vol_ratio:.1f}x avg).",
+        )
+    elif wyckoff_utad:
+        candidates["WYCKOFF_VSA"] = (
+            "SELL",
+            "WYCKOFF_UTAD",
+            "SELL (Wyckoff Upthrust UTAD + VSA Supply)",
+            82,
+            f"Wyckoff Distribution Upthrust (UTAD) Confirmed: False breakout above resistance ({prior_high:.{dec}f}) rejected back inside structure (Vol {vol_ratio:.1f}x avg).",
+        )
+
+    # 6. BOLLINGER_MEAN_REV
+    if bb_bull_rev:
+        candidates["BOLLINGER_MEAN_REV"] = (
+            "BUY",
+            "BOLLINGER_MEAN_REV",
+            "BUY (Bollinger 2σ + RSI Exhaustion Reversal)",
+            80,
+            f"Bollinger Mean-Reversion BUY: Lower 2.0σ band ({bb_low_val:.{dec}f}) pierced and rejected with bullish close & RSI hook ({prev_rsi:.1f} → {rsi14:.1f}).",
+        )
+    elif bb_bear_rev:
+        candidates["BOLLINGER_MEAN_REV"] = (
+            "SELL",
+            "BOLLINGER_MEAN_REV",
+            "SELL (Bollinger 2σ + RSI Exhaustion Reversal)",
+            80,
+            f"Bollinger Mean-Reversion SELL: Upper 2.0σ band ({bb_high_val:.{dec}f}) pierced and rejected with bearish close & RSI hook ({prev_rsi:.1f} → {rsi14:.1f}).",
+        )
+
+    # 7. TURTLE_BREAKOUT
+    if bull_breakout:
+        candidates["TURTLE_BREAKOUT"] = (
+            "BUY",
+            "TURTLE_BREAKOUT",
+            f"BUY ({brk_len}-Bar Structure Breakout)",
+            82,
+            f"Momentum Breakout Confirmed: Stacked EMA 9/21/50 ribbon with expansion candle closing above {brk_len}-bar high ({prev_brk_high:.{dec}f}).",
         )
     elif bear_breakout:
-        direction = "SELL"
-        signal_type = "MOMENTUM_BREAKOUT"
-        signal = f"SELL ({'Swing Structure Breakdown' if trading_style == 'SWING' else 'Institutional Breakdown'})"
-        base_conf = 81
-        reason = (
-            f"Structure Breakdown Confirmed: Stacked bearish EMA 9/21/50 ribbon with expansion candle "
-            f"closing below {brk_len}-bar structure ({prev_brk_low:.2f}) and RSI at {rsi14:.1f}."
+        candidates["TURTLE_BREAKOUT"] = (
+            "SELL",
+            "TURTLE_BREAKOUT",
+            f"SELL ({brk_len}-Bar Structure Breakdown)",
+            82,
+            f"Momentum Breakdown Confirmed: Stacked bearish EMA 9/21/50 ribbon with expansion candle closing below {brk_len}-bar low ({prev_brk_low:.{dec}f}).",
         )
+
+    # Select winning candidate based on user's chosen `strategy`
+    chosen = None
+    if strategy == "FLEXIBLE_HYBRID":
+        # Pick highest-confidence candidate; prioritize SMC / Trend / ICT ties
+        priority_order = [
+            "SMC_ORDER_BLOCK",
+            "TREND_PULLBACK",
+            "ICT_SILVER_BULLET",
+            "FIB_GOLDEN_POCKET",
+            "TURTLE_BREAKOUT",
+            "WYCKOFF_VSA",
+            "BOLLINGER_MEAN_REV",
+        ]
+        best_score = -1
+        for s_key in priority_order:
+            if s_key in candidates:
+                cand = candidates[s_key]
+                if cand[3] > best_score:
+                    best_score = cand[3]
+                    chosen = cand
+    else:
+        chosen = candidates.get(strategy)
+
+    if chosen:
+        direction, signal_type, signal, base_conf, reason = chosen
     else:
         direction = "WAIT"
         signal_type = "WAIT"
-        signal = f"WAIT (No Confirmed {style_cfg['code'].title()} Setup — Hold Fire)"
-        base_conf = 42
+        signal = f"WAIT (No {strat_cfg['short']} Setup — Hold Fire)"
+        base_conf = 44
         reason = (
-            f"No {style_cfg['name']} trade opened: Price ({price:.2f}) is mid-structure between Swing High ({recent_high:.2f}) "
-            f"and Swing Low ({recent_low:.2f}). Waiting for Golden Pocket ({fib_618_bull:.2f}–{fib_382_bull:.2f}) or EMA21 ({ema21:.2f}) confirmation."
+            f"No {strat_cfg['name']} trigger on {style_cfg['name']}: Price ({price:.{dec}f}) is between Swing High ({recent_high:.{dec}f}) "
+            f"and Swing Low ({recent_low:.{dec}f}). Waiting for confirmed {strat_cfg['short']} zone ({fib_618_bull:.{dec}f}–{fib_382_bull:.{dec}f})."
         )
 
     # Adjust confidence with Fundamental & News alignment
     if direction == "BUY":
         if fundamental_bias == "BULLISH":
-            base_conf = min(96, base_conf + 8)
+            base_conf = min(96, base_conf + 7)
         elif fundamental_bias == "BEARISH":
-            base_conf = max(60, base_conf - 6)
+            base_conf = max(58, base_conf - 5)
     elif direction == "SELL":
         if fundamental_bias == "BEARISH":
-            base_conf = min(96, base_conf + 8)
+            base_conf = min(96, base_conf + 7)
         elif fundamental_bias == "BULLISH":
-            base_conf = max(60, base_conf - 6)
+            base_conf = max(58, base_conf - 5)
 
-    entry = round(price, 2)
-    # Determine structural bias even when WAIT so reference levels show the dominant swing direction
+    # Enforce user's minimum confidence threshold filter
+    if direction in ("BUY", "SELL") and base_conf < int(min_confidence or 70):
+        direction = "WAIT"
+        signal_type = "WAIT_BELOW_MIN_CONF"
+        signal = f"WAIT (Filtered < {int(min_confidence)}% Min Confidence)"
+        reason = f"Candidate {chosen[0]} setup scored {base_conf}% confidence, below your saved {int(min_confidence)}% threshold."
+
+    entry = round(price, dec)
     ref_bull = ema21 >= ema50
     if direction == "BUY" or (direction == "WAIT" and ref_bull):
-        sl = round(price - sl_mult * atr14, 2)
-        tp1 = round(price + tp1_mult * atr14, 2)
-        tp2 = round(price + tp2_mult * atr14, 2)
+        sl = round(price - sl_mult * atr14, dec)
+        tp1 = round(price + tp1_mult * atr14, dec)
+        tp2 = round(price + tp2_mult * atr14, dec)
     else:
-        sl = round(price + sl_mult * atr14, 2)
-        tp1 = round(price - tp1_mult * atr14, 2)
-        tp2 = round(price - tp2_mult * atr14, 2)
+        sl = round(price + sl_mult * atr14, dec)
+        tp1 = round(price - tp1_mult * atr14, dec)
+        tp2 = round(price - tp2_mult * atr14, dec)
 
     risk = abs(entry - sl)
     reward2 = abs(tp2 - entry)
@@ -867,38 +1124,38 @@ def compute_signal_at(
             "name": f"{style_cfg['code'].title()} EMA 21/50/200 Trend",
             "passed": bool(uptrend_structure or downtrend_structure),
             "detail": (
-                f"Bullish Swing (EMA200 {ema200:.1f})"
+                f"Bullish (EMA200 {ema200:.{dec}f})"
                 if uptrend_structure
-                else (f"Bearish Swing (EMA200 {ema200:.1f})" if downtrend_structure else "Consolidating")
+                else (f"Bearish (EMA200 {ema200:.{dec}f})" if downtrend_structure else "Consolidating")
             ),
         },
         {
-            "name": "Fib Golden Pocket / Value Zone",
-            "passed": bool(touched_buy_zone or touched_sell_zone or bull_sweep_confirmed or bear_sweep_confirmed),
+            "name": f"Strategy: {strat_cfg['short']}",
+            "passed": bool(chosen is not None),
             "detail": (
-                f"In Fib/EMA Zone ({fib_500_bull:.1f})"
-                if (touched_buy_zone or touched_sell_zone or bull_sweep_confirmed or bear_sweep_confirmed)
-                else f"Await {fib_500_bull:.1f} / {ema21:.1f}"
+                f"{signal_type.replace('_', ' ')} Triggered"
+                if chosen is not None
+                else f"Scanning {strat_cfg['short']}"
             ),
         },
         {
-            "name": "Rejection / Expansion Candle",
+            "name": "Fib / Liquidity / OB Zone",
+            "passed": bool(touched_buy_zone or touched_sell_zone or ict_bull_sweep or ict_bear_sweep or bull_fvg or bear_fvg),
+            "detail": (
+                f"In Key Zone ({fib_500_bull:.{dec}f})"
+                if (touched_buy_zone or touched_sell_zone or ict_bull_sweep or ict_bear_sweep)
+                else f"Watch {fib_500_bull:.{dec}f} / {ema21:.{dec}f}"
+            ),
+        },
+        {
+            "name": "Displacement / Rejection Bar",
             "passed": bool(bull_candle or bear_candle),
-            "detail": f"{int(body_ratio * 100)}% Body ({'Bullish' if bull_candle else ('Bearish' if bear_candle else 'Doji/Neutral')})",
+            "detail": f"{int(body_ratio * 100)}% Body ({'Bullish' if bull_candle else ('Bearish' if bear_candle else 'Neutral')})",
         },
         {
-            "name": "RSI & MACD Swing Impulse",
-            "passed": bool(bull_momentum or bear_momentum or bull_sweep_confirmed or bear_sweep_confirmed),
-            "detail": f"RSI {rsi14:.1f} · MACD Hist {hist:+.2f}",
-        },
-        {
-            "name": "Macro DXY & News Alignment",
-            "passed": bool(
-                (direction == "BUY" and fundamental_bias != "BEARISH")
-                or (direction == "SELL" and fundamental_bias != "BULLISH")
-                or fundamental_bias != "NEUTRAL"
-            ),
-            "detail": f"{fundamental_bias} ({fundamental_score:+d})",
+            "name": "RSI & MACD Impulse",
+            "passed": bool(bull_momentum or bear_momentum or bb_bull_rev or bb_bear_rev),
+            "detail": f"RSI {rsi14:.1f} · MACD {hist:+.{dec}f}",
         },
     ]
 
@@ -906,10 +1163,15 @@ def compute_signal_at(
         "trading_style": trading_style,
         "style_name": style_cfg["name"],
         "style_badge": style_cfg["badge"],
+        "strategy": strategy,
+        "strategy_name": strat_cfg["name"],
+        "strategy_short": strat_cfg["short"],
+        "strategy_badge": strat_cfg["badge"],
         "hold_duration_label": style_cfg["hold_duration_label"],
         "sl_mult": sl_mult,
         "tp1_mult": tp1_mult,
         "tp2_mult": tp2_mult,
+        "min_confidence": int(min_confidence or 70),
         "direction": direction,
         "signal_type": signal_type,
         "signal": signal,
@@ -920,11 +1182,11 @@ def compute_signal_at(
         "take_profit_2": tp2,
         "risk_reward": rr_ratio,
         "rationale": reason,
-        "recent_high": round(recent_high, 2),
-        "recent_low": round(recent_low, 2),
-        "fib_382": round(fib_382_bull, 2),
-        "fib_500": round(fib_500_bull, 2),
-        "fib_618": round(fib_618_bull, 2),
+        "recent_high": round(recent_high, dec),
+        "recent_low": round(recent_low, dec),
+        "fib_382": round(fib_382_bull, dec),
+        "fib_500": round(fib_500_bull, dec),
+        "fib_618": round(fib_618_bull, dec),
         "checklist": checklist,
     }
 
@@ -1619,28 +1881,71 @@ def sync_telegram_updates(run_commands=True):
     return {"ok": True, "new_subscribers": new_subs, "subscribers": get_telegram_subscribers()}
 
 
+def get_saved_trading_config():
+    """Returns the user's persisted trading settings from DB (app_settings)."""
+    s = get_all_settings()
+    sym = s.get("saved_symbol", "OANDA:XAUUSD")
+    if sym not in SUPPORTED_ASSETS:
+        sym = "OANDA:XAUUSD"
+    style = s.get("saved_trading_style", "SWING").upper()
+    if style not in TRADING_STYLES:
+        style = "SWING"
+    strat = s.get("saved_strategy", "FLEXIBLE_HYBRID").upper()
+    if strat not in TRADING_STRATEGIES:
+        strat = "FLEXIBLE_HYBRID"
+    style_cfg = TRADING_STYLES[style]
+    tf = s.get("saved_timeframe", style_cfg["default_tf"])
+    if tf not in TV_INTERVAL_MAP:
+        tf = style_cfg["default_tf"]
+
+    def _flt(key, default):
+        try:
+            return float(s.get(key, default))
+        except Exception:
+            return float(default)
+
+    return {
+        "symbol": sym,
+        "trading_style": style,
+        "strategy": strat,
+        "timeframe": tf,
+        "sl_mult": _flt("saved_sl_mult", style_cfg["sl_mult"]),
+        "tp1_mult": _flt("saved_tp1_mult", style_cfg["tp1_mult"]),
+        "tp2_mult": _flt("saved_tp2_mult", style_cfg["tp2_mult"]),
+        "min_confidence": int(_flt("saved_min_conf", 70)),
+        "account_balance": _flt("saved_account_balance", 10000.0),
+        "risk_pct": _flt("saved_risk_pct", 1.0),
+        "updated_at": s.get("saved_config_updated_at", ""),
+    }
+
+
 def run_and_store_backtest(
     symbol="OANDA:XAUUSD",
     interval="1h",
     trading_style="SWING",
+    strategy="FLEXIBLE_HYBRID",
     strategy_mode="PRO_CONFIRMED",
     bars_tested=450,
     duration_preset=None,
     sl_mult=None,
     tp1_mult=None,
     tp2_mult=None,
+    min_confidence=70,
     candles=None,
 ):
     """
     Runs a historical simulation across `bars_tested` (or deep `duration_preset`: 7_DAYS, 30_DAYS, 90_DAYS, 1_YEAR)
-    for the chosen `trading_style` (SWING, INTRADAY, SCALPING, POSITION) with STRICT SINGLE-POSITION LOCK:
+    for the chosen `trading_style` and `strategy` with STRICT SINGLE-POSITION LOCK:
     - Never opens a new trade while a trade is still open.
     - Never opens a trade when `direction == 'WAIT'`.
     - Moves Stop Loss to Break-Even (Entry) once TP1 is hit, banking 50% at TP1 and letting 50% run to TP2!
     """
     if trading_style not in TRADING_STYLES:
         trading_style = "SWING"
+    if strategy not in TRADING_STRATEGIES:
+        strategy = "FLEXIBLE_HYBRID"
     style_cfg = TRADING_STYLES[trading_style]
+    strat_cfg = TRADING_STRATEGIES[strategy]
 
     if sl_mult is None:
         sl_mult = style_cfg["sl_mult"]
@@ -1672,6 +1977,7 @@ def run_and_store_backtest(
     f_score = fundamentals["score"]
 
     closes = [c["close"] for c in candles]
+    dec = 4 if closes[-1] < 10 else (3 if closes[-1] < 100 else 2)
     ema9_s = ema_series(closes, 9)
     ema21_s = ema_series(closes, 21)
     ema50_s = ema_series(closes, 50)
@@ -1680,6 +1986,11 @@ def run_and_store_backtest(
     atr14_s = atr_series(candles, 14)
     _, _, macd_h = macd_series(closes, 12, 26, 9)
     bb_u, _, bb_l = bollinger_series(closes, 20, 2.0)
+
+    # Allow legacy strategy_mode dropdown values to map to specific strategies if strategy is FLEXIBLE_HYBRID
+    effective_strategy = strategy
+    if strategy_mode in TRADING_STRATEGIES:
+        effective_strategy = strategy_mode
 
     trades = []
     n = len(candles)
@@ -1703,9 +2014,11 @@ def run_and_store_backtest(
             bb_l=bb_l,
             ema200_s=ema200_s,
             trading_style=trading_style,
+            strategy=effective_strategy,
             sl_mult=sl_mult,
             tp1_mult=tp1_mult,
             tp2_mult=tp2_mult,
+            min_confidence=min_confidence,
             fundamental_bias=f_bias,
             fundamental_score=f_score,
         )
@@ -1714,10 +2027,10 @@ def run_and_store_backtest(
             i += 1
             continue
 
-        if strategy_mode == "TREND_ONLY" and sig["signal_type"] not in ("PRO_TREND_PULLBACK", "SWING_GOLDEN_PULLBACK"):
+        if strategy_mode == "TREND_ONLY" and sig["signal_type"] not in ("TREND_PULLBACK", "FIB_GOLDEN_POCKET", "SMC_ORDER_BLOCK"):
             i += 1
             continue
-        if strategy_mode == "MEAN_REVERSION" and sig["signal_type"] != "LIQUIDITY_SWEEP":
+        if strategy_mode == "MEAN_REVERSION" and sig["signal_type"] not in ("BOLLINGER_MEAN_REV", "ICT_SILVER_BULLET", "WYCKOFF_SPRING", "WYCKOFF_UTAD"):
             i += 1
             continue
         if strategy_mode == "HIGH_CONFIDENCE" and sig["confidence"] < 80:
@@ -1744,7 +2057,7 @@ def run_and_store_backtest(
                 if cl <= active_sl:
                     if hit_tp1:
                         outcome = "WIN_TP1_BE"
-                        exit_price = round((tp1 + entry) / 2.0, 2)
+                        exit_price = round((tp1 + entry) / 2.0, dec)
                     else:
                         outcome = "LOSS_SL"
                         exit_price = sl
@@ -1764,7 +2077,7 @@ def run_and_store_backtest(
                 if ch >= active_sl:
                     if hit_tp1:
                         outcome = "WIN_TP1_BE"
-                        exit_price = round((tp1 + entry) / 2.0, 2)
+                        exit_price = round((tp1 + entry) / 2.0, dec)
                     else:
                         outcome = "LOSS_SL"
                         exit_price = sl
@@ -1789,10 +2102,10 @@ def run_and_store_backtest(
 
         if outcome is not None:
             pnl = (exit_price - entry) if direction == "BUY" else (entry - exit_price)
-            pnl = round(pnl, 2)
-            cum_pnl = round(cum_pnl + pnl, 2)
+            pnl = round(pnl, dec)
+            cum_pnl = round(cum_pnl + pnl, dec)
             peak_pnl = max(peak_pnl, cum_pnl)
-            max_dd = max(max_dd, round(peak_pnl - cum_pnl, 2))
+            max_dd = max(max_dd, round(peak_pnl - cum_pnl, dec))
             trades.append(
                 {
                     "entry_time": candles[i]["time_local"],
@@ -1804,7 +2117,7 @@ def run_and_store_backtest(
                     "sl": sl,
                     "tp1": tp1,
                     "tp2": tp2,
-                    "exit": round(exit_price, 2),
+                    "exit": round(exit_price, dec),
                     "outcome": outcome,
                     "pnl": pnl,
                     "cum_pnl": cum_pnl,
@@ -1824,17 +2137,18 @@ def run_and_store_backtest(
     gross_win = sum(wins_list)
     gross_loss = sum(loss_list)
     profit_factor = round(gross_win / gross_loss, 2) if gross_loss > 0 else (99.0 if gross_win > 0 else 0.0)
-    avg_win = round(gross_win / wins, 2) if wins > 0 else 0.0
-    avg_loss = round(gross_loss / losses, 2) if losses > 0 else 0.0
-    expectancy = round(cum_pnl / total, 2) if total > 0 else 0.0
+    avg_win = round(gross_win / wins, dec) if wins > 0 else 0.0
+    avg_loss = round(gross_loss / losses, dec) if losses > 0 else 0.0
+    expectancy = round(cum_pnl / total, dec) if total > 0 else 0.0
 
     span_str = ""
     if candles:
         span_str = f"{candles[0]['time_local'][:10]} → {candles[-1]['time_local'][:10]}"
 
-    mode_label = f"{trading_style} · {strategy_mode}"
+    strat_label = TRADING_STRATEGIES.get(effective_strategy, strat_cfg)["short"]
+    mode_label = f"{trading_style} · {strat_label}"
     if duration_preset and duration_preset in DURATION_PRESETS:
-        mode_label = f"{trading_style} · {strategy_mode} ({DURATION_PRESETS[duration_preset]['label']})"
+        mode_label = f"{trading_style} · {strat_label} ({DURATION_PRESETS[duration_preset]['label']})"
 
     now_local = datetime.now(TZ_UTC7).strftime("%Y-%m-%d %H:%M:%S UTC+7")
     summary = {
@@ -1851,7 +2165,7 @@ def run_and_store_backtest(
         "wins": wins,
         "losses": losses,
         "win_rate": win_rate,
-        "net_pnl_pts": round(cum_pnl, 2),
+        "net_pnl_pts": round(cum_pnl, dec),
         "profit_factor": profit_factor,
         "max_drawdown_pts": max_dd,
         "expectancy_pts": expectancy,
@@ -1871,20 +2185,41 @@ def analyze_timeframe(
     symbol="OANDA:XAUUSD",
     interval="1h",
     trading_style="SWING",
+    strategy="FLEXIBLE_HYBRID",
+    sl_mult=None,
+    tp1_mult=None,
+    tp2_mult=None,
+    min_confidence=None,
     include_series=False,
 ):
     """
     Full institutional analysis pipeline:
-    1. Streams TradingView OHLCV candles + live Scanner tick + Macro DXY/News Intelligence
-    2. Computes Trading-Style-Specific Signal (SWING by default, INTRADAY, SCALPING, POSITION)
+    1. Streams TradingView OHLCV candles + live Global Scanner tick + Macro DXY/News Intelligence
+    2. Computes Trading-Style & Strategy-Specific Signal (SMC, ICT, Trend Pullback, Golden Pocket, Wyckoff, etc.)
     3. Passes the candidate setup through the Pre-Signal AI Agent Layer (3-Agent Committee / Gemini 4 Argon)
        BEFORE emitting the final signal or locking a position
     4. Evaluates Single-Position Lock and triggers automatic Telegram Bot notifications on state transitions
     """
     init_db()
+    saved_cfg = get_saved_trading_config()
     if trading_style not in TRADING_STYLES:
-        trading_style = "SWING"
+        trading_style = saved_cfg["trading_style"]
+    if strategy not in TRADING_STRATEGIES:
+        strategy = saved_cfg["strategy"]
+    if symbol not in SUPPORTED_ASSETS:
+        symbol = "OANDA:XAUUSD"
+
     style_cfg = TRADING_STYLES[trading_style]
+    strat_cfg = TRADING_STRATEGIES[strategy]
+
+    if sl_mult is None:
+        sl_mult = saved_cfg["sl_mult"] if trading_style == saved_cfg["trading_style"] else style_cfg["sl_mult"]
+    if tp1_mult is None:
+        tp1_mult = saved_cfg["tp1_mult"] if trading_style == saved_cfg["trading_style"] else style_cfg["tp1_mult"]
+    if tp2_mult is None:
+        tp2_mult = saved_cfg["tp2_mult"] if trading_style == saved_cfg["trading_style"] else style_cfg["tp2_mult"]
+    if min_confidence is None:
+        min_confidence = saved_cfg["min_confidence"]
 
     symbol, candles = fetch_tradingview_candles(symbol=symbol, interval=interval, n_bars=450)
     if len(candles) < 30:
@@ -1906,6 +2241,8 @@ def analyze_timeframe(
     closes = [c["close"] for c in candles]
     highs = [c["high"] for c in candles]
     lows = [c["low"] for c in candles]
+    last_close = closes[-1]
+    dec = SUPPORTED_ASSETS.get(symbol, {}).get("decimals", 4 if last_close < 10 else (3 if last_close < 100 else 2))
 
     ema9_s = ema_series(closes, 9)
     ema21_s = ema_series(closes, 21)
@@ -1930,16 +2267,17 @@ def analyze_timeframe(
         bb_l=bb_l,
         ema200_s=ema200_s,
         trading_style=trading_style,
-        sl_mult=style_cfg["sl_mult"],
-        tp1_mult=style_cfg["tp1_mult"],
-        tp2_mult=style_cfg["tp2_mult"],
+        strategy=strategy,
+        sl_mult=sl_mult,
+        tp1_mult=tp1_mult,
+        tp2_mult=tp2_mult,
+        min_confidence=min_confidence,
         fundamental_bias=fundamentals["bias"],
         fundamental_score=fundamentals["score"],
     )
 
     day_high = max(highs[-288:]) if len(highs) >= 288 else max(highs)
     day_low = min(lows[-288:]) if len(lows) >= 288 else min(lows)
-    last_close = closes[-1]
     pivot = (day_high + day_low + last_close) / 3.0
     r1 = 2 * pivot - day_low
     s1 = 2 * pivot - day_high
@@ -1948,41 +2286,41 @@ def analyze_timeframe(
 
     swing_h = sig["recent_high"]
     swing_l = sig["recent_low"]
-    diff = max(swing_h - swing_l, 0.01)
+    diff = max(swing_h - swing_l, 0.0001)
     fib_levels = {
-        "0.0% (Swing High)": round(swing_h, 2),
-        "23.6%": round(swing_h - 0.236 * diff, 2),
-        "38.2% (Golden Top)": round(swing_h - 0.382 * diff, 2),
-        "50.0% (Equilibrium)": round(swing_h - 0.500 * diff, 2),
-        "61.8% (Golden Base)": round(swing_h - 0.618 * diff, 2),
-        "78.6%": round(swing_h - 0.786 * diff, 2),
-        "100.0% (Swing Low)": round(swing_l, 2),
+        "0.0% (Swing High)": round(swing_h, dec),
+        "23.6%": round(swing_h - 0.236 * diff, dec),
+        "38.2% (Golden Top)": round(swing_h - 0.382 * diff, dec),
+        "50.0% (Equilibrium)": round(swing_h - 0.500 * diff, dec),
+        "61.8% (Golden Base)": round(swing_h - 0.618 * diff, dec),
+        "78.6%": round(swing_h - 0.786 * diff, dec),
+        "100.0% (Swing Low)": round(swing_l, dec),
     }
 
     indicators = {
-        "ema9": round(ema9_s[-1], 2),
-        "ema21": round(ema21_s[-1], 2),
-        "ema50": round(ema50_s[-1], 2),
-        "ema200": round(ema200_s[-1], 2),
+        "ema9": round(ema9_s[-1], dec),
+        "ema21": round(ema21_s[-1], dec),
+        "ema50": round(ema50_s[-1], dec),
+        "ema200": round(ema200_s[-1], dec),
         "rsi14": round(rsi14_s[-1], 2),
-        "atr14": round(atr14_s[-1], 2),
-        "macd": round(macd_l[-1], 2),
-        "macd_signal": round(macd_sig[-1], 2),
-        "macd_hist": round(macd_h[-1], 2),
+        "atr14": round(atr14_s[-1], dec),
+        "macd": round(macd_l[-1], dec),
+        "macd_signal": round(macd_sig[-1], dec),
+        "macd_hist": round(macd_h[-1], dec),
         "bb_upper": bb_u[-1],
         "bb_mid": bb_m[-1],
         "bb_lower": bb_l[-1],
         "recent_2h_high": sig["recent_high"],
         "recent_2h_low": sig["recent_low"],
-        "day_high": round(day_high, 2),
-        "day_low": round(day_low, 2),
+        "day_high": round(day_high, dec),
+        "day_low": round(day_low, dec),
     }
     pivots = {
-        "r2": round(r2, 2),
-        "r1": round(r1, 2),
-        "pivot": round(pivot, 2),
-        "s1": round(s1, 2),
-        "s2": round(s2, 2),
+        "r2": round(r2, dec),
+        "r1": round(r1, dec),
+        "pivot": round(pivot, dec),
+        "s1": round(s1, dec),
+        "s2": round(s2, dec),
     }
 
     # ===============================================================
@@ -1993,7 +2331,7 @@ def analyze_timeframe(
         interval=interval,
         trading_style=trading_style,
         candle_ts=candles[-1]["timestamp"],
-        current_price=round(last_close, 2),
+        current_price=round(last_close, dec),
         raw_sig=sig,
         indicators=indicators,
         pivots=pivots,
@@ -2022,14 +2360,21 @@ def analyze_timeframe(
 
     result = {
         "symbol": symbol,
+        "asset_info": SUPPORTED_ASSETS.get(symbol, {}),
+        "all_assets": SUPPORTED_ASSETS,
         "timeframe": interval,
         "trading_style": trading_style,
         "style_info": style_cfg,
         "all_styles": TRADING_STYLES,
+        "strategy": strategy,
+        "strategy_info": strat_cfg,
+        "all_strategies": TRADING_STRATEGIES,
+        "saved_settings": saved_cfg,
         "last_candle_time": candles[-1]["time"],
         "last_candle_time_local": candles[-1]["time_local"],
         "last_candle_ts": candles[-1]["timestamp"],
-        "current_price": round(last_close, 2),
+        "current_price": round(last_close, dec),
+        "decimals": dec,
         "direction": final_direction,
         "raw_direction": sig["direction"],
         "signal_type": sig["signal_type"],
@@ -2042,6 +2387,7 @@ def analyze_timeframe(
         "sl_mult": sig["sl_mult"],
         "tp1_mult": sig["tp1_mult"],
         "tp2_mult": sig["tp2_mult"],
+        "min_confidence": sig["min_confidence"],
         "risk_reward": sig["risk_reward"],
         "rationale": final_rationale,
         "checklist": sig["checklist"],
@@ -2064,16 +2410,16 @@ def analyze_timeframe(
         tail = 90
         result["series"] = {
             "candles": candles[-tail:],
-            "ema9": [round(x, 2) for x in ema9_s[-tail:]],
-            "ema21": [round(x, 2) for x in ema21_s[-tail:]],
-            "ema50": [round(x, 2) for x in ema50_s[-tail:]],
-            "ema200": [round(x, 2) for x in ema200_s[-tail:]],
+            "ema9": [round(x, dec) for x in ema9_s[-tail:]],
+            "ema21": [round(x, dec) for x in ema21_s[-tail:]],
+            "ema50": [round(x, dec) for x in ema50_s[-tail:]],
+            "ema200": [round(x, dec) for x in ema200_s[-tail:]],
             "bb_upper": bb_u[-tail:],
             "bb_lower": bb_l[-tail:],
             "rsi14": [round(x, 2) for x in rsi14_s[-tail:]],
-            "macd": [round(x, 2) for x in macd_l[-tail:]],
-            "macd_signal": [round(x, 2) for x in macd_sig[-tail:]],
-            "macd_hist": [round(x, 2) for x in macd_h[-tail:]],
+            "macd": [round(x, dec) for x in macd_l[-tail:]],
+            "macd_signal": [round(x, dec) for x in macd_sig[-tail:]],
+            "macd_hist": [round(x, dec) for x in macd_h[-tail:]],
         }
         runs = get_backtest_runs(limit=15)
         matching = [
@@ -2088,11 +2434,13 @@ def analyze_timeframe(
                 symbol=symbol,
                 interval=interval,
                 trading_style=trading_style,
+                strategy=strategy,
                 strategy_mode="PRO_CONFIRMED",
                 bars_tested=450,
-                sl_mult=style_cfg["sl_mult"],
-                tp1_mult=style_cfg["tp1_mult"],
-                tp2_mult=style_cfg["tp2_mult"],
+                sl_mult=sl_mult,
+                tp1_mult=tp1_mult,
+                tp2_mult=tp2_mult,
+                min_confidence=min_confidence,
                 candles=candles,
             )
         else:

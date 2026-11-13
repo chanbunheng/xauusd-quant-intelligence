@@ -8,9 +8,51 @@ const API_BASE =
     ? window.API_BASE
     : "https://gold-signal-api-production.up.railway.app";
 
+const STORAGE_CONFIG_KEY = "aurumquant_trading_config";
+
+const ASSET_CATALOG = {
+  "OANDA:XAUUSD":   { symbol: "OANDA:XAUUSD",   name: "Gold Spot (XAU/USD · OANDA)",   short: "XAU/USD", category: "Metals",  decimals: 2 },
+  "OANDA:XAGUSD":   { symbol: "OANDA:XAGUSD",   name: "Silver Spot (XAG/USD · OANDA)", short: "XAG/USD", category: "Metals",  decimals: 3 },
+  "BINANCE:BTCUSDT":{ symbol: "BINANCE:BTCUSDT",name: "Bitcoin (BTC/USDT)",            short: "BTC/USD", category: "Crypto",  decimals: 2 },
+  "BINANCE:ETHUSDT":{ symbol: "BINANCE:ETHUSDT",name: "Ethereum (ETH/USDT)",           short: "ETH/USD", category: "Crypto",  decimals: 2 },
+  "BINANCE:SOLUSDT":{ symbol: "BINANCE:SOLUSDT",name: "Solana (SOL/USDT)",             short: "SOL/USD", category: "Crypto",  decimals: 2 },
+  "OANDA:SPX500USD":{ symbol: "OANDA:SPX500USD",name: "S&P 500 Index (SPX500)",        short: "SPX500",  category: "Indices", decimals: 2 },
+  "OANDA:NAS100USD":{ symbol: "OANDA:NAS100USD",name: "Nasdaq 100 Tech (NAS100)",      short: "NAS100",  category: "Indices", decimals: 2 },
+  "OANDA:EURUSD":   { symbol: "OANDA:EURUSD",   name: "EUR/USD Major Forex",           short: "EUR/USD", category: "Forex",   decimals: 4 },
+  "OANDA:GBPUSD":   { symbol: "OANDA:GBPUSD",   name: "GBP/USD Cable Forex",           short: "GBP/USD", category: "Forex",   decimals: 4 },
+  "OANDA:USDJPY":   { symbol: "OANDA:USDJPY",   name: "USD/JPY Yen Forex",             short: "USD/JPY", category: "Forex",   decimals: 3 },
+  "NASDAQ:NVDA":    { symbol: "NASDAQ:NVDA",    name: "NVIDIA Corp (NVDA)",            short: "NVDA",    category: "Stocks",  decimals: 2 },
+  "NASDAQ:AAPL":    { symbol: "NASDAQ:AAPL",    name: "Apple Inc (AAPL)",              short: "AAPL",    category: "Stocks",  decimals: 2 }
+};
+
+const STRATEGY_CATALOG = {
+  FLEXIBLE_HYBRID:    { code: "FLEXIBLE_HYBRID",    short: "Flexible AI",        name: "Flexible AI Hybrid (All 7 Strategies)" },
+  SMC_ORDER_BLOCK:    { code: "SMC_ORDER_BLOCK",    short: "SMC (BOS/OB/FVG)",   name: "SMC (Break of Structure + Order Block + FVG)" },
+  ICT_SILVER_BULLET:  { code: "ICT_SILVER_BULLET",  short: "ICT Silver Bullet",  name: "ICT Silver Bullet (Liquidity Sweep + OTE)" },
+  TREND_PULLBACK:     { code: "TREND_PULLBACK",     short: "Trend Pullback",     name: "Trend Pullback (EMA 9/21/50/200 Ribbon)" },
+  FIB_GOLDEN_POCKET:  { code: "FIB_GOLDEN_POCKET",  short: "Fib Golden Pocket",  name: "Fibonacci Golden Pocket (38.2%–61.8% Wave)" },
+  WYCKOFF_VSA:        { code: "WYCKOFF_VSA",        short: "Wyckoff & VSA",      name: "Wyckoff Spring / Upthrust + Volume Spread" },
+  BOLLINGER_MEAN_REV: { code: "BOLLINGER_MEAN_REV", short: "Bollinger Reversal", name: "Bollinger 2σ + RSI Exhaustion Reversal" },
+  TURTLE_BREAKOUT:    { code: "TURTLE_BREAKOUT",    short: "Momentum Breakout",  name: "Donchian & Volatility Squeeze Breakout" }
+};
+
+const STYLE_DEFAULTS = {
+  SWING:    { tf: "1h",  sl: 1.5, tp1: 2.5, tp2: 4.0, label: "Swing Trade" },
+  INTRADAY: { tf: "15m", sl: 1.2, tp1: 1.8, tp2: 3.0, label: "Intraday Session" },
+  SCALPING: { tf: "1m",  sl: 1.0, tp1: 1.5, tp2: 2.0, label: "Scalping" },
+  POSITION: { tf: "4h",  sl: 1.8, tp1: 3.0, tp2: 5.0, label: "Macro Position" }
+};
+
 let currentSymbol = "OANDA:XAUUSD";
 let currentStyle = "SWING";
+let currentStrategy = "FLEXIBLE_HYBRID";
 let currentTf = "1h";
+let currentSlMult = 1.5;
+let currentTp1Mult = 2.5;
+let currentTp2Mult = 4.0;
+let currentMinConf = 70;
+let hasLocalSavedConfig = false;
+
 let currentView = "overview";
 let currentData = null;
 let selectedRunDetail = null;
@@ -25,28 +67,144 @@ let oscMode = "RSI";
 let hoverIdx = null;
 let pendingConfirmAction = null;
 
-const STYLE_DEFAULTS = {
-  SWING:    { tf: "1h",  sl: 1.5, tp1: 2.5, tp2: 4.0, label: "Swing Trade (1H)" },
-  INTRADAY: { tf: "15m", sl: 1.2, tp1: 1.8, tp2: 3.0, label: "Intraday (15m)" },
-  SCALPING: { tf: "1m",  sl: 1.0, tp1: 1.5, tp2: 2.0, label: "Scalping (1m)" },
-  POSITION: { tf: "4h",  sl: 1.8, tp1: 3.0, tp2: 5.0, label: "Position (4H)" }
-};
-
 const DURATION_BARS_MAP = {
-  "300": { preset: "300_BARS", bars: 300 },
-  "7d":  { preset: "7_DAYS",   bars: 450 },
-  "30d": { preset: "30_DAYS",  bars: 720 },
-  "90d": { preset: "90_DAYS",  bars: 1200 },
-  "1y":  { preset: "1_YEAR",   bars: 2000 }
+  "300": { preset: "450_BARS", bars: 450 },
+  "7d":  { preset: "7_DAYS",   bars: 2500 },
+  "30d": { preset: "30_DAYS",  bars: 5000 },
+  "90d": { preset: "90_DAYS",  bars: 5000 },
+  "1y":  { preset: "1_YEAR",   bars: 5000 }
 };
 
 const STRATEGY_MODE_MAP = {
-  ALL:                      "PRO_CONFIRMED",
-  SWING_GOLDEN_POCKET:      "PRO_CONFIRMED",
-  PRO_TREND_PULLBACK:       "TREND_ONLY",
-  LIQUIDITY_SWEEP_REVERSAL: "MEAN_REVERSION",
-  MOMENTUM_BREAKOUT:        "HIGH_CONFIDENCE"
+  FLEXIBLE_HYBRID:    "PRO_CONFIRMED",
+  SMC_ORDER_BLOCK:    "SMC_ORDER_BLOCK",
+  ICT_SILVER_BULLET:  "ICT_SILVER_BULLET",
+  TREND_PULLBACK:     "TREND_PULLBACK",
+  FIB_GOLDEN_POCKET:  "FIB_GOLDEN_POCKET",
+  WYCKOFF_VSA:        "WYCKOFF_VSA",
+  BOLLINGER_MEAN_REV: "BOLLINGER_MEAN_REV",
+  TURTLE_BREAKOUT:    "TURTLE_BREAKOUT"
 };
+
+function getAssetDecimals(sym, priceVal = null) {
+  if (ASSET_CATALOG[sym] && typeof ASSET_CATALOG[sym].decimals === "number") {
+    return ASSET_CATALOG[sym].decimals;
+  }
+  const p = priceVal !== null ? priceVal : currentData?.current_price || 1000;
+  return p < 10 ? 4 : p < 100 ? 3 : 2;
+}
+
+function fmtPrice(val, sym = currentSymbol) {
+  if (val === null || val === undefined || isNaN(val)) return "---";
+  const dec = getAssetDecimals(sym, Number(val));
+  const prefix = sym.includes("EUR") || sym.includes("GBP") || sym.includes("USDJPY") || sym === "TVC:DXY" ? "" : "$";
+  return `${prefix}${Number(val).toFixed(dec)}`;
+}
+
+function loadSavedConfigFromLocal() {
+  try {
+    const raw = localStorage.getItem(STORAGE_CONFIG_KEY);
+    if (!raw) return false;
+    const cfg = JSON.parse(raw);
+    if (cfg.symbol && ASSET_CATALOG[cfg.symbol]) currentSymbol = cfg.symbol;
+    if (cfg.trading_style && STYLE_DEFAULTS[cfg.trading_style]) currentStyle = cfg.trading_style;
+    if (cfg.strategy && STRATEGY_CATALOG[cfg.strategy]) currentStrategy = cfg.strategy;
+    if (cfg.timeframe) currentTf = cfg.timeframe;
+    if (cfg.sl_mult) currentSlMult = parseFloat(cfg.sl_mult) || STYLE_DEFAULTS[currentStyle].sl;
+    if (cfg.tp1_mult) currentTp1Mult = parseFloat(cfg.tp1_mult) || STYLE_DEFAULTS[currentStyle].tp1;
+    if (cfg.tp2_mult) currentTp2Mult = parseFloat(cfg.tp2_mult) || STYLE_DEFAULTS[currentStyle].tp2;
+    if (cfg.min_confidence) currentMinConf = parseInt(cfg.min_confidence, 10) || 70;
+    if (cfg.account_balance && el("riskAccountInput")) el("riskAccountInput").value = cfg.account_balance;
+    if (cfg.risk_pct && el("riskPctInput")) el("riskPctInput").value = cfg.risk_pct;
+    hasLocalSavedConfig = true;
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function persistConfigToLocal() {
+  try {
+    const payload = {
+      symbol: currentSymbol,
+      trading_style: currentStyle,
+      strategy: currentStrategy,
+      timeframe: currentTf,
+      sl_mult: currentSlMult,
+      tp1_mult: currentTp1Mult,
+      tp2_mult: currentTp2Mult,
+      min_confidence: currentMinConf,
+      account_balance: parseFloat(el("riskAccountInput")?.value) || 10000,
+      risk_pct: parseFloat(el("riskPctInput")?.value) || 1.0,
+      saved_at: new Date().toLocaleTimeString()
+    };
+    localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(payload));
+    hasLocalSavedConfig = true;
+  } catch (e) {}
+}
+
+async function saveTradingSettingsToBackend(silent = false) {
+  persistConfigToLocal();
+  syncControlsWithState();
+  try {
+    const body = {
+      saved_symbol: currentSymbol,
+      saved_trading_style: currentStyle,
+      saved_strategy: currentStrategy,
+      saved_timeframe: currentTf,
+      saved_sl_mult: currentSlMult,
+      saved_tp1_mult: currentTp1Mult,
+      saved_tp2_mult: currentTp2Mult,
+      saved_min_conf: currentMinConf,
+      saved_account_balance: parseFloat(el("riskAccountInput")?.value) || 10000,
+      saved_risk_pct: parseFloat(el("riskPctInput")?.value) || 1.0
+    };
+    const res = await fetch(`${API_BASE}/api/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data && data.saved_settings && el("savedSetupTimestamp")) {
+      el("savedSetupTimestamp").textContent = `Saved: ${data.saved_settings.updated_at || "Just now"}`;
+    }
+    if (!silent) {
+      showToast(`💾 Saved Setup: ${ASSET_CATALOG[currentSymbol]?.short || currentSymbol} · ${currentStyle} · ${STRATEGY_CATALOG[currentStrategy]?.short || currentStrategy}`);
+    }
+  } catch (e) {
+    if (!silent) showToast("Saved setup to browser localStorage");
+  }
+}
+
+function syncControlsWithState() {
+  document.querySelectorAll("#styleGroup .style-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.style === currentStyle);
+  });
+  document.querySelectorAll("#tfGroup .tf-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.tf === currentTf);
+  });
+  if (el("symbolSelect")) el("symbolSelect").value = currentSymbol;
+  if (el("strategySelect")) el("strategySelect").value = currentStrategy;
+  if (el("btStrategySelect")) el("btStrategySelect").value = currentStrategy;
+  if (el("btSlInput")) el("btSlInput").value = currentSlMult;
+  if (el("btTp1Input")) el("btTp1Input").value = currentTp1Mult;
+  if (el("btTp2Input")) el("btTp2Input").value = currentTp2Mult;
+
+  // Settings View controls
+  if (el("cfgSymbolSelect")) el("cfgSymbolSelect").value = currentSymbol;
+  if (el("cfgStyleSelect")) el("cfgStyleSelect").value = currentStyle;
+  if (el("cfgStrategySelect")) el("cfgStrategySelect").value = currentStrategy;
+  if (el("cfgTimeframeSelect")) el("cfgTimeframeSelect").value = currentTf;
+  if (el("cfgSlMultInput")) el("cfgSlMultInput").value = currentSlMult;
+  if (el("cfgTp1MultInput")) el("cfgTp1MultInput").value = currentTp1Mult;
+  if (el("cfgTp2MultInput")) el("cfgTp2MultInput").value = currentTp2Mult;
+  if (el("cfgMinConfInput")) el("cfgMinConfInput").value = currentMinConf;
+
+  const stratShort = STRATEGY_CATALOG[currentStrategy]?.short || currentStrategy;
+  if (el("activeStyleBadgeHeader")) {
+    el("activeStyleBadgeHeader").textContent = `${currentStyle} · ${stratShort} · ${currentTf}`;
+  }
+}
 
 function el(id) {
   return document.getElementById(id);
@@ -181,7 +339,7 @@ function updateClocksAndCountdown() {
 }
 
 // ============================================================================
-// 3. LIVE TICK POLLING & MULTI-BROKER TICKER
+// 3. LIVE TICK POLLING & MULTI-ASSET TICKER (OANDA Exclusive for XAU)
 // ============================================================================
 async function pollLiveTick() {
   try {
@@ -190,9 +348,10 @@ async function pollLiveTick() {
     if (!tick || !tick.active) return;
 
     const price = tick.active.price;
-    if (el("headerPrice")) el("headerPrice").textContent = `$${price.toFixed(2)}`;
+    if (el("headerPrice")) el("headerPrice").textContent = fmtPrice(price, currentSymbol);
     if (el("headerBrokerLabel")) {
-      el("headerBrokerLabel").textContent = currentSymbol.split(":")[0];
+      const meta = ASSET_CATALOG[currentSymbol];
+      el("headerBrokerLabel").textContent = meta ? `${meta.short} · ${currentSymbol.split(":")[0]}` : currentSymbol;
     }
 
     const boxEl = el("headerPriceBox");
@@ -218,8 +377,8 @@ async function pollLiveTick() {
       renderTerminalWatchlist();
     }
 
-    if (customAlertPrice && Math.abs(price - customAlertPrice) <= 1.2) {
-      showToast(`🔔 Alert: ${currentSymbol} reached $${price.toFixed(2)}!`);
+    if (customAlertPrice && Math.abs(price - customAlertPrice) <= Math.max(price * 0.0005, 0.5)) {
+      showToast(`🔔 Alert: ${currentSymbol} reached ${fmtPrice(price, currentSymbol)}!`);
       customAlertPrice = null;
       if (el("activeAlertStatus")) el("activeAlertStatus").textContent = "Triggered!";
     }
@@ -241,23 +400,29 @@ async function pollLiveTick() {
 function renderBrokerPills(brokers) {
   const wrap = el("brokerPills");
   if (!wrap) return;
-  const labels = {
-    "OANDA:XAUUSD": "OANDA",
-    "FX:XAUUSD": "FXCM",
-    "FOREXCOM:XAUUSD": "FOREX",
-    "TVC:DXY": "DXY"
-  };
+  const topTape = [
+    "OANDA:XAUUSD",
+    "OANDA:XAGUSD",
+    "BINANCE:BTCUSDT",
+    "BINANCE:ETHUSDT",
+    "OANDA:SPX500USD",
+    "OANDA:NAS100USD",
+    "OANDA:EURUSD",
+    "NASDAQ:NVDA",
+    "TVC:DXY"
+  ];
   const items = [];
-  Object.keys(labels).forEach((sym) => {
+  topTape.forEach((sym) => {
     const b = brokers[sym];
-    if (!b) return;
+    if (!b || !b.price) return;
     const isUp = (b.change_pct || 0) >= 0;
     const col = isUp ? "var(--buy)" : "var(--sell)";
-    const fmtPrice = sym === "TVC:DXY" ? b.price.toFixed(2) : `$${b.price.toFixed(2)}`;
+    const label = sym === "OANDA:XAUUSD" ? "XAU (OANDA)" : (ASSET_CATALOG[sym]?.short || "DXY");
+    const isClickable = Boolean(ASSET_CATALOG[sym]);
     items.push(`
-      <span class="broker-pill">
-        <span style="color:var(--text-2);">${labels[sym]}</span>
-        <strong style="color:var(--text-0);">${fmtPrice}</strong>
+      <span class="broker-pill" ${isClickable ? `style="cursor:pointer;" onclick="quickSelectAsset('${sym}')"` : ""} title="${escapeHtml(ASSET_CATALOG[sym]?.name || sym)}">
+        <span style="color:${sym === currentSymbol ? "var(--gold-bright)" : "var(--text-2)"};font-weight:700;">${escapeHtml(label)}</span>
+        <strong style="color:var(--text-0);">${fmtPrice(b.price, sym)}</strong>
         <span style="color:${col};">${isUp ? "+" : ""}${(b.change_pct || 0).toFixed(2)}%</span>
       </span>
     `);
@@ -265,14 +430,45 @@ function renderBrokerPills(brokers) {
   if (items.length) wrap.innerHTML = items.join("");
 }
 
+window.quickSelectAsset = function (sym) {
+  if (!ASSET_CATALOG[sym] || sym === currentSymbol) return;
+  currentSymbol = sym;
+  persistConfigToLocal();
+  syncControlsWithState();
+  selectedRunDetail = null;
+  fetchFullDashboard();
+  pollLiveTick();
+  showToast(`Switched asset to ${ASSET_CATALOG[sym].name}`);
+};
+
 // ============================================================================
 // 4. FULL DASHBOARD SYNC
 // ============================================================================
 async function fetchFullDashboard() {
   try {
+    const qsParams = new URLSearchParams({
+      symbol: currentSymbol,
+      interval: currentTf,
+      style: currentStyle,
+      strategy: currentStrategy,
+      sl_mult: String(currentSlMult),
+      tp1_mult: String(currentTp1Mult),
+      tp2_mult: String(currentTp2Mult),
+      min_conf: String(currentMinConf)
+    });
+    const mtfParams = new URLSearchParams({
+      symbol: currentSymbol,
+      style: currentStyle,
+      strategy: currentStrategy,
+      sl_mult: String(currentSlMult),
+      tp1_mult: String(currentTp1Mult),
+      tp2_mult: String(currentTp2Mult),
+      min_conf: String(currentMinConf)
+    });
+
     const [analyzeRes, mtfRes, runsRes, liveSigRes, tgRes] = await Promise.all([
-      fetch(`${API_BASE}/api/analyze?symbol=${encodeURIComponent(currentSymbol)}&interval=${currentTf}&style=${currentStyle}`),
-      fetch(`${API_BASE}/api/mtf?symbol=${encodeURIComponent(currentSymbol)}&style=${currentStyle}`),
+      fetch(`${API_BASE}/api/analyze?${qsParams.toString()}`),
+      fetch(`${API_BASE}/api/mtf?${mtfParams.toString()}`),
       fetch(`${API_BASE}/api/backtests`),
       fetch(`${API_BASE}/api/live_signals`),
       fetch(`${API_BASE}/api/telegram/status`)
@@ -286,6 +482,25 @@ async function fetchFullDashboard() {
 
     if (data.error) throw new Error(data.error);
     currentData = data;
+
+    // If user had no localStorage saved config yet, adopt cloud saved_settings if present
+    if (!hasLocalSavedConfig && data.saved_settings && data.saved_settings.updated_at) {
+      const sc = data.saved_settings;
+      if (sc.symbol && ASSET_CATALOG[sc.symbol]) currentSymbol = sc.symbol;
+      if (sc.trading_style && STYLE_DEFAULTS[sc.trading_style]) currentStyle = sc.trading_style;
+      if (sc.strategy && STRATEGY_CATALOG[sc.strategy]) currentStrategy = sc.strategy;
+      if (sc.timeframe) currentTf = sc.timeframe;
+      if (sc.sl_mult) currentSlMult = parseFloat(sc.sl_mult);
+      if (sc.tp1_mult) currentTp1Mult = parseFloat(sc.tp1_mult);
+      if (sc.tp2_mult) currentTp2Mult = parseFloat(sc.tp2_mult);
+      if (sc.min_confidence) currentMinConf = parseInt(sc.min_confidence, 10);
+      persistConfigToLocal();
+      syncControlsWithState();
+    }
+
+    if (data.saved_settings?.updated_at && el("savedSetupTimestamp")) {
+      el("savedSetupTimestamp").textContent = `Saved: ${data.saved_settings.updated_at}`;
+    }
 
     renderMainSignal(data);
     renderAiAgentLayer(data.ai_agent);
@@ -319,6 +534,7 @@ async function fetchFullDashboard() {
 function updateBentoKpis() {
   const d = currentData;
   const bt = selectedRunDetail || (d && d.backtest) || null;
+  const dec = getAssetDecimals(currentSymbol);
 
   if (bt) {
     const netPts = bt.net_pnl_pts || 0;
@@ -336,7 +552,7 @@ function updateBentoKpis() {
       el("kpiWinRate").style.color = (bt.win_rate || 0) >= 50 ? "var(--buy)" : "var(--gold-bright)";
     }
     if (el("kpiTotalNetPnl")) {
-      el("kpiTotalNetPnl").textContent = `${netPts >= 0 ? "+" : ""}${netPts.toFixed(1)} pts (${bt.total_trades || 0}T)`;
+      el("kpiTotalNetPnl").textContent = `${netPts >= 0 ? "+" : ""}${netPts.toFixed(dec)} pts (${bt.total_trades || 0}T)`;
     }
     if (el("kpiProfitFactorBadge")) {
       el("kpiProfitFactorBadge").textContent = `PF ${bt.profit_factor || "--"}`;
@@ -350,7 +566,7 @@ function updateBentoKpis() {
         d.direction === "BUY" ? "var(--buy)" : d.direction === "SELL" ? "var(--sell)" : "var(--gold-bright)";
     }
     if (el("kpiSignalEntrySub")) {
-      el("kpiSignalEntrySub").textContent = `Entry $${d.entry.toFixed(2)}`;
+      el("kpiSignalEntrySub").textContent = `Entry ${fmtPrice(d.entry, d.symbol)}`;
     }
 
     const pl = d.position_lock || {};
@@ -362,14 +578,15 @@ function updateBentoKpis() {
           : at.entry_price - d.current_price
         : at.floating_pnl || 0;
       if (el("kpiUnrealizedPnl")) {
-        el("kpiUnrealizedPnl").textContent = `${fp >= 0 ? "+" : ""}${fp.toFixed(2)} pts`;
+        el("kpiUnrealizedPnl").textContent = `${fp >= 0 ? "+" : ""}${fp.toFixed(dec)} pts`;
         el("kpiUnrealizedPnl").style.color = fp >= 0 ? "var(--buy)" : "var(--sell)";
       }
       if (el("kpiActivePosSub")) el("kpiActivePosSub").textContent = `Locked #${at.id} ${at.direction}`;
       if (el("kpiActivePosBadge")) el("kpiActivePosBadge").textContent = "LOCKED";
     } else {
       if (el("kpiUnrealizedPnl")) {
-        el("kpiUnrealizedPnl").textContent = `${d.timeframe} Ready`;
+        const stratShort = STRATEGY_CATALOG[d.strategy || currentStrategy]?.short || "Ready";
+        el("kpiUnrealizedPnl").textContent = `${stratShort} · ${d.timeframe}`;
         el("kpiUnrealizedPnl").style.color = "var(--text-2)";
       }
       if (el("kpiActivePosSub")) el("kpiActivePosSub").textContent = "0 Open Trades";
@@ -398,13 +615,15 @@ function updateBentoKpis() {
 }
 
 function renderMainSignal(d) {
-  if (el("headerPrice")) el("headerPrice").textContent = `$${d.current_price.toFixed(2)}`;
-  if (el("activeTfLabel")) el("activeTfLabel").textContent = `${d.trading_style} · ${d.timeframe}`;
+  const dec = getAssetDecimals(d.symbol, d.current_price);
+  const stratShort = STRATEGY_CATALOG[d.strategy || currentStrategy]?.short || d.strategy || "Flexible AI";
+  if (el("headerPrice")) el("headerPrice").textContent = fmtPrice(d.current_price, d.symbol);
+  if (el("activeTfLabel")) el("activeTfLabel").textContent = `${d.trading_style} · ${stratShort} · ${d.timeframe}`;
   if (el("activeStyleBadgeHeader")) {
-    el("activeStyleBadgeHeader").textContent = `${d.trading_style} · ${d.timeframe}`;
+    el("activeStyleBadgeHeader").textContent = `${d.trading_style} · ${stratShort} · ${d.timeframe}`;
   }
   if (el("chartHeaderSymTf")) {
-    el("chartHeaderSymTf").textContent = `${d.symbol} · ${d.timeframe} (${d.trading_style})`;
+    el("chartHeaderSymTf").textContent = `${d.symbol} · ${d.timeframe} (${d.trading_style} · ${stratShort})`;
   }
 
   const isBull = d.indicators.ema21 >= d.indicators.ema50;
@@ -428,7 +647,7 @@ function renderMainSignal(d) {
       lockTitle.style.color = "var(--gold-bright)";
     }
     if (lockReason) {
-      lockReason.innerHTML = `${at.direction} @ $${at.entry_price.toFixed(2)} · SL $${at.sl_price.toFixed(2)} · TP1 $${at.tp1_price.toFixed(2)}`;
+      lockReason.innerHTML = `${at.direction} @ ${fmtPrice(at.entry_price, d.symbol)} · SL ${fmtPrice(at.sl_price, d.symbol)} · TP1 ${fmtPrice(at.tp1_price, d.symbol)}`;
     }
     if (closeBtn) closeBtn.style.display = "inline-flex";
   } else {
@@ -438,7 +657,7 @@ function renderMainSignal(d) {
       lockTitle.style.color = "var(--blue)";
     }
     if (lockReason) {
-      lockReason.textContent = `0 Open Positions on ${d.timeframe}.`;
+      lockReason.textContent = `0 Open Positions on ${d.symbol} (${d.timeframe}).`;
     }
     if (closeBtn) closeBtn.style.display = "none";
   }
@@ -462,18 +681,18 @@ function renderMainSignal(d) {
   const rr1 = riskPts > 0 ? (tp1Pts / riskPts).toFixed(1) : "--";
   const rr2 = riskPts > 0 ? (tp2Pts / riskPts).toFixed(1) : "--";
 
-  if (el("lvlEntry")) el("lvlEntry").textContent = `$${dispEntry.toFixed(2)}`;
+  if (el("lvlEntry")) el("lvlEntry").textContent = fmtPrice(dispEntry, d.symbol);
   if (el("lvlSpread")) el("lvlSpread").textContent = activeTrade ? `Locked #${activeTrade.id}` : "Spot Ref";
-  if (el("lvlSL")) el("lvlSL").textContent = `$${dispSl.toFixed(2)}`;
-  if (el("lvlRisk")) el("lvlRisk").textContent = `${riskPts.toFixed(1)} pts (${d.sl_mult}x ATR)`;
-  if (el("lvlTP1")) el("lvlTP1").textContent = `$${dispTp1.toFixed(2)}`;
+  if (el("lvlSL")) el("lvlSL").textContent = fmtPrice(dispSl, d.symbol);
+  if (el("lvlRisk")) el("lvlRisk").textContent = `${riskPts.toFixed(dec)} pts (${d.sl_mult}x ATR)`;
+  if (el("lvlTP1")) el("lvlTP1").textContent = fmtPrice(dispTp1, d.symbol);
   if (el("lvlRR1")) el("lvlRR1").textContent = `R:R 1:${rr1}`;
-  if (el("lvlTP2")) el("lvlTP2").textContent = `$${dispTp2.toFixed(2)}`;
+  if (el("lvlTP2")) el("lvlTP2").textContent = fmtPrice(dispTp2, d.symbol);
   if (el("lvlRR2")) el("lvlRR2").textContent = `R:R 1:${rr2}`;
 
   if (el("rationaleBox")) el("rationaleBox").textContent = d.rationale;
 
-  // Compact Checklist Pills (Minimalist, zero clutter)
+  // Compact Checklist Pills
   const cGrid = el("checklistGrid");
   if (cGrid) {
     cGrid.innerHTML = (d.checklist || [])
@@ -489,15 +708,15 @@ function renderMainSignal(d) {
   }
 
   if (d.pivots) {
-    if (el("pivP")) el("pivP").textContent = `$${d.pivots.pivot.toFixed(2)}`;
-    if (el("pivR1S1")) el("pivR1S1").textContent = `R1 $${d.pivots.r1.toFixed(0)} · S1 $${d.pivots.s1.toFixed(0)}`;
+    if (el("pivP")) el("pivP").textContent = fmtPrice(d.pivots.pivot, d.symbol);
+    if (el("pivR1S1")) el("pivR1S1").textContent = `R1 ${fmtPrice(d.pivots.r1, d.symbol)} · S1 ${fmtPrice(d.pivots.s1, d.symbol)}`;
   }
   if (d.ai_agent && el("vwapVal")) el("vwapVal").textContent = d.ai_agent.watch_zone || "--";
   if (d.indicators) {
     if (el("bbWidthVal")) el("bbWidthVal").textContent = `RSI ${d.indicators.rsi14.toFixed(1)}`;
-    if (el("atrVal")) el("atrVal").textContent = `$${d.indicators.atr14.toFixed(2)}`;
+    if (el("atrVal")) el("atrVal").textContent = fmtPrice(d.indicators.atr14, d.symbol);
     if (el("emaRibbonVal")) {
-      el("emaRibbonVal").textContent = `${d.indicators.ema21.toFixed(0)} / ${d.indicators.ema50.toFixed(0)}`;
+      el("emaRibbonVal").textContent = `${d.indicators.ema21.toFixed(dec)} / ${d.indicators.ema50.toFixed(dec)}`;
     }
   }
 }
@@ -524,9 +743,9 @@ function renderMtf(mtf, mtfOrder) {
         <td>${item.confidence}%</td>
         <td style="color:${isBull ? "var(--buy)" : "var(--sell)"};font-weight:700;">${isBull ? "▲ Bull" : "▼ Bear"}</td>
         <td>${item.rsi14.toFixed(1)}</td>
-        <td>$${item.entry.toFixed(1)}</td>
-        <td style="color:var(--sell);">$${item.stop_loss.toFixed(1)}</td>
-        <td style="color:var(--buy);">$${item.take_profit_1.toFixed(1)}</td>
+        <td>${fmtPrice(item.entry, currentSymbol)}</td>
+        <td style="color:var(--sell);">${fmtPrice(item.stop_loss, currentSymbol)}</td>
+        <td style="color:var(--buy);">${fmtPrice(item.take_profit_1, currentSymbol)}</td>
       </tr>
     `);
   });
@@ -646,28 +865,54 @@ function renderTerminalWatchlist() {
   const query = (el("watchlistSearchInput")?.value || "").trim().toUpperCase();
 
   const b = latestTickBrokers || {};
-  const oanda = b["OANDA:XAUUSD"] || { price: currentData?.current_price || 4748.0, change_pct: 0.12 };
-  const fx = b["FX:XAUUSD"] || { price: oanda.price, change_pct: oanda.change_pct };
-  const forex = b["FOREXCOM:XAUUSD"] || { price: oanda.price, change_pct: oanda.change_pct };
-  const dxy = b["TVC:DXY"] || { price: currentData?.fundamentals?.dxy?.price || 98.81, change_pct: 0.04 };
+  const assetKeys = Object.keys(ASSET_CATALOG);
+  const items = assetKeys.map((sym) => {
+    const meta = ASSET_CATALOG[sym];
+    const tickObj = b[sym] || {};
+    const p = tickObj.price || (sym === currentSymbol ? currentData?.current_price : 0) || 0;
+    const chg = tickObj.change_pct || 0;
+    return {
+      symbol: sym,
+      short: sym === "OANDA:XAUUSD" ? "XAU/USD · OANDA" : meta.short,
+      name: meta.name,
+      category: meta.category,
+      price: p > 0 ? fmtPrice(p, sym) : "---",
+      chg: chg,
+      selectable: true
+    };
+  });
 
-  const items = [
-    { symbol: "OANDA:XAUUSD", name: "Gold · OANDA", price: `$${oanda.price.toFixed(2)}`, chg: oanda.change_pct || 0, selectable: true, mode: "LIVE" },
-    { symbol: "FX:XAUUSD", name: "Gold · FXCM", price: `$${fx.price.toFixed(2)}`, chg: fx.change_pct || 0, selectable: true, mode: "LIVE" },
-    { symbol: "FOREXCOM:XAUUSD", name: "Gold · FOREX", price: `$${forex.price.toFixed(2)}`, chg: forex.change_pct || 0, selectable: true, mode: "LIVE" },
-    { symbol: "TVC:DXY", name: "US Dollar Index", price: dxy.price.toFixed(2), chg: dxy.change_pct || 0, selectable: false, mode: "LIVE" },
-    { symbol: "XAG/USD", name: "Silver Spot", price: "$33.42", chg: 0.42, selectable: false, mode: "SIM" },
-    { symbol: "US10Y", name: "US 10Y Yield", price: "4.28%", chg: -0.18, selectable: false, mode: "SIM" }
-  ].filter((i) => !query || i.symbol.includes(query) || i.name.toUpperCase().includes(query));
+  // Also append TVC:DXY reference at bottom
+  const dxyObj = b["TVC:DXY"] || { price: currentData?.fundamentals?.dxy?.price || 0, change_pct: 0 };
+  if (dxyObj.price > 0) {
+    items.push({
+      symbol: "TVC:DXY",
+      short: "DXY Index",
+      name: "US Dollar Index (Macro)",
+      category: "Macro",
+      price: dxyObj.price.toFixed(2),
+      chg: dxyObj.change_pct || 0,
+      selectable: false
+    });
+  }
 
-  container.innerHTML = items
+  const filtered = items.filter(
+    (i) =>
+      !query ||
+      i.symbol.toUpperCase().includes(query) ||
+      i.short.toUpperCase().includes(query) ||
+      i.name.toUpperCase().includes(query) ||
+      i.category.toUpperCase().includes(query)
+  );
+
+  container.innerHTML = filtered
     .map((item) => {
       const isUp = item.chg >= 0;
       return `
         <div class="watchlist-item ${item.symbol === currentSymbol ? "active" : ""}" data-sym="${item.symbol}" data-sel="${item.selectable}">
           <div style="min-width:0;">
-            <div class="watchlist-sym">${escapeHtml(item.symbol.replace(":XAUUSD", ""))}</div>
-            <div style="font-size:9.5px;color:var(--text-2);">${escapeHtml(item.name)}</div>
+            <div class="watchlist-sym">${escapeHtml(item.short)}</div>
+            <div style="font-size:9.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.name)}</div>
           </div>
           <div style="text-align:right;">
             <div class="watchlist-price">${item.price}</div>
@@ -684,19 +929,20 @@ function renderTerminalWatchlist() {
     row.addEventListener("click", () => {
       if (row.dataset.sel === "true" && row.dataset.sym !== currentSymbol) {
         const nextSym = row.dataset.sym;
+        const nextName = ASSET_CATALOG[nextSym]?.name || nextSym;
         openConfirmDialog({
-          title: "Switch Broker Feed",
-          badge: "FEED",
-          desc: `Switch live terminal feed to ${nextSym}?`,
-          meta: `Current: ${currentSymbol} → Target: ${nextSym}`,
-          confirmLabel: "Switch Feed ↵",
+          title: "Switch Active Market Asset",
+          badge: "MARKET FEED",
+          desc: `Switch live terminal & AI signal scanner to ${nextName} and save it as your active asset?`,
+          meta: `Previous: ${currentSymbol} → New: ${nextSym} (${nextName})`,
+          confirmLabel: "Switch & Save ↵",
           onConfirm: () => {
             currentSymbol = nextSym;
-            if (el("symbolSelect")) el("symbolSelect").value = nextSym;
             selectedRunDetail = null;
+            saveTradingSettingsToBackend(true);
             fetchFullDashboard();
             pollLiveTick();
-            showToast(`Switched feed to ${nextSym}`);
+            showToast(`Active Asset: ${nextName}`);
           }
         });
       }
@@ -708,14 +954,15 @@ function updatePositionSizer() {
   if (!currentData) return;
   const account = parseFloat(el("riskAccountInput")?.value) || 10000;
   const riskPct = parseFloat(el("riskPctInput")?.value) || 1.0;
+  const dec = getAssetDecimals(currentSymbol, currentData.current_price);
 
   const entry = currentData.entry || currentData.current_price || 4748;
-  const sl = currentData.stop_loss || entry - 15;
-  const stopDist = Math.max(Math.abs(entry - sl), 0.1);
+  const sl = currentData.stop_loss || entry * 0.995;
+  const stopDist = Math.max(Math.abs(entry - sl), 0.0001);
 
   const dollarRisk = account * (riskPct / 100);
-  const ounces = dollarRisk / stopDist;
-  const lots = ounces / 100;
+  const units = dollarRisk / stopDist;
+  const lots = units / 100;
 
   if (el("ticketSymbolLbl")) el("ticketSymbolLbl").textContent = currentSymbol;
   if (el("ticketBiasLbl")) {
@@ -723,9 +970,9 @@ function updatePositionSizer() {
     el("ticketBiasLbl").style.color =
       currentData.direction === "BUY" ? "var(--buy)" : currentData.direction === "SELL" ? "var(--sell)" : "var(--gold-bright)";
   }
-  if (el("ticketStopDistLbl")) el("ticketStopDistLbl").textContent = `${stopDist.toFixed(1)} pts`;
+  if (el("ticketStopDistLbl")) el("ticketStopDistLbl").textContent = `${stopDist.toFixed(dec)} pts`;
   if (el("calcDollarRisk")) el("calcDollarRisk").textContent = `$${dollarRisk.toFixed(2)}`;
-  if (el("calcOuncesSize")) el("calcOuncesSize").textContent = `${ounces.toFixed(2)} oz`;
+  if (el("calcOuncesSize")) el("calcOuncesSize").textContent = `${units.toFixed(2)} units`;
   if (el("calcLotSize")) el("calcLotSize").textContent = `${lots.toFixed(2)} lots`;
 }
 
@@ -1175,22 +1422,26 @@ function renderStrategyLab() {
   if (!grid) return;
 
   const blueprints = [
-    { id: "SWING_GOLDEN_POCKET", name: "Swing Golden Pocket ★", style: "SWING", tf: "1h", sl: 1.5, tp1: 2.5, tp2: 4.0, desc: "1H Fibonacci 38.2%–61.8% + EMA 21/50 alignment." },
-    { id: "PRO_TREND_PULLBACK", name: "Intraday EMA Pullback", style: "INTRADAY", tf: "15m", sl: 1.2, tp1: 1.8, tp2: 3.0, desc: "15m London/NY killzone pullback into EMA 21." },
-    { id: "LIQUIDITY_SWEEP_REVERSAL", name: "Bollinger Liquidity Sweep", style: "SCALPING", tf: "5m", sl: 1.0, tp1: 1.5, tp2: 2.2, desc: "5m exhaustion wick outside 2σ Bollinger + RSI." },
-    { id: "MOMENTUM_BREAKOUT", name: "Macro Breakout Runner", style: "POSITION", tf: "4h", sl: 1.8, tp1: 3.0, tp2: 5.0, desc: "4H multi-day trend expansion with 50% TP1 lock." }
+    { id: "FLEXIBLE_HYBRID",    name: "Flexible AI Hybrid (Adaptive)", style: "SWING",    tf: "1h",  sl: 1.5, tp1: 2.5, tp2: 4.0, desc: "Evaluates all 7 algorithms in parallel and selects the highest-conviction setup." },
+    { id: "SMC_ORDER_BLOCK",    name: "Smart Money Concepts (SMC)",    style: "SWING",    tf: "1h",  sl: 1.4, tp1: 2.5, tp2: 4.2, desc: "Break of Structure (BOS) + 3-bar Fair Value Gap (FVG) + Order Block mitigation." },
+    { id: "ICT_SILVER_BULLET",  name: "ICT Silver Bullet (Sweep+OTE)", style: "INTRADAY", tf: "15m", sl: 1.2, tp1: 2.0, tp2: 3.5, desc: "Judas Liquidity Sweep + Displacement impulse + 61.8%–79% Optimal Trade Entry." },
+    { id: "TREND_PULLBACK",     name: "Institutional Trend Pullback",  style: "INTRADAY", tf: "15m", sl: 1.2, tp1: 1.8, tp2: 3.0, desc: "Stacked EMA 9/21/50/200 dynamic pullback with RSI & MACD confirmation." },
+    { id: "FIB_GOLDEN_POCKET",  name: "Fibonacci Golden Pocket Wave",  style: "SWING",    tf: "1h",  sl: 1.5, tp1: 2.5, tp2: 4.0, desc: "Multi-bar impulse retracement into the 38.2%–61.8% Fibonacci Golden Zone." },
+    { id: "WYCKOFF_VSA",        name: "Wyckoff Spring / Upthrust VSA", style: "SWING",    tf: "1h",  sl: 1.3, tp1: 2.2, tp2: 3.8, desc: "Detects false breakdowns (Springs) & Upthrusts (UTAD) with Volume Spread rejection." },
+    { id: "BOLLINGER_MEAN_REV", name: "Bollinger 2σ + RSI Exhaustion", style: "SCALPING", tf: "5m",  sl: 1.0, tp1: 1.5, tp2: 2.2, desc: "Statistical 2.0σ Bollinger Band pierce + oversold/overbought RSI hook." },
+    { id: "TURTLE_BREAKOUT",    name: "Donchian Volatility Breakout",  style: "POSITION", tf: "4h",  sl: 1.8, tp1: 3.0, tp2: 5.0, desc: "High-velocity expansion candle breaking N-bar structure high/low." }
   ];
 
   grid.innerHTML = blueprints
     .map(
       (bp) => `
-      <div class="strategy-preset-card" data-name="${escapeHtml(bp.name)}" data-style="${bp.style}" data-tf="${bp.tf}" data-sl="${bp.sl}" data-tp1="${bp.tp1}" data-tp2="${bp.tp2}" data-strat="${bp.id}">
+      <div class="strategy-preset-card" data-name="${escapeHtml(bp.name)}" data-style="${bp.style}" data-tf="${bp.tf}" data-sl="${bp.sl}" data-tp1="${bp.tp1}" data-tp2="${bp.tp2}" data-strat="${bp.id}" style="${bp.id === currentStrategy ? "border-color:var(--gold-bright);" : ""}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
           <strong style="font-size:12px;color:var(--text-0);">${escapeHtml(bp.name)}</strong>
-          <span class="pill NEUTRAL">${bp.style} · ${bp.tf}</span>
+          <span class="pill ${bp.id === currentStrategy ? "BUY" : "NEUTRAL"}">${bp.style} · ${bp.tf}</span>
         </div>
         <div style="font-size:11px;color:var(--text-1);margin-bottom:4px;">${escapeHtml(bp.desc)}</div>
-        <div class="tabular" style="font-size:10px;color:var(--gold-bright);">SL ${bp.sl}x · TP1 ${bp.tp1}x · TP2 ${bp.tp2}x ATR</div>
+        <div class="tabular" style="font-size:10px;color:var(--gold-bright);">Strategy: ${bp.id} · SL ${bp.sl}x · TP1 ${bp.tp1}x · TP2 ${bp.tp2}x ATR</div>
       </div>
     `
     )
@@ -1201,18 +1452,20 @@ function renderStrategyLab() {
       const name = card.dataset.name;
       const st = card.dataset.style;
       const tf = card.dataset.tf;
+      const strat = card.dataset.strat;
       openConfirmDialog({
-        title: "Apply Strategy Blueprint",
-        badge: "PRESET",
-        desc: `Load "${name}" parameters and recalculate signals?`,
-        meta: `Style: ${st} (${tf})\nSL: ${card.dataset.sl}x ATR · TP1: ${card.dataset.tp1}x ATR · TP2: ${card.dataset.tp2}x ATR`,
-        confirmLabel: "Apply Preset ↵",
+        title: "Apply & Save Bot Strategy Blueprint",
+        badge: strat,
+        desc: `Activate "${name}" and save it as your persistent trading configuration?`,
+        meta: `Strategy: ${name}\nTrading Type: ${st} (${tf})\nSL: ${card.dataset.sl}x ATR · TP1: ${card.dataset.tp1}x ATR · TP2: ${card.dataset.tp2}x ATR`,
+        confirmLabel: "Activate & Save ↵",
         onConfirm: () => {
-          if (el("btStrategySelect")) el("btStrategySelect").value = card.dataset.strat;
-          if (el("btSlInput")) el("btSlInput").value = card.dataset.sl;
-          if (el("btTp1Input")) el("btTp1Input").value = card.dataset.tp1;
-          if (el("btTp2Input")) el("btTp2Input").value = card.dataset.tp2;
-          applyTradingStyleDirect(st, tf);
+          currentStrategy = strat;
+          currentSlMult = parseFloat(card.dataset.sl) || 1.5;
+          currentTp1Mult = parseFloat(card.dataset.tp1) || 2.5;
+          currentTp2Mult = parseFloat(card.dataset.tp2) || 4.0;
+          applyTradingStyleDirect(st, tf, true);
+          renderStrategyLab();
         }
       });
     });
@@ -1223,12 +1476,12 @@ function renderFeatureFlagsPanel() {
   const grid = el("featureFlagsGrid");
   if (!grid) return;
   const modules = [
-    { name: "TradingView Multi-Broker Feed", mode: "LIVE", desc: "1.5s quotes across OANDA, FXCM, FOREX & DXY." },
+    { name: "OANDA XAU/USD + Top 12 Global Feeds", mode: "LIVE", desc: "Exclusive OANDA feed for XAU/USD + Silver, BTC, ETH, SOL, SPX500, NAS100, Forex & NVDA/AAPL." },
+    { name: "8 Selectable Institutional Strategies", mode: "LIVE", desc: "Flexible AI, SMC (BOS/OB/FVG), ICT Silver Bullet, Trend Pullback, Golden Pocket, Wyckoff VSA, Bollinger & Breakout." },
+    { name: "Persistent Trading Setup (No Reset)", mode: "LIVE", desc: "Saves your Trading Type, Strategy, Asset, Timeframe & SL/TP to localStorage + Supabase DB." },
     { name: "3-Agent AI Gate + Argon", mode: "LIVE", desc: "Technical + Macro + Risk pre-signal filter." },
     { name: "Single-Position Lock", mode: "LIVE", desc: "Prevents duplicate entries until TP/SL." },
-    { name: "Supabase Cloud PostgreSQL", mode: "LIVE", desc: "Stores backtests, signals & Telegram chats." },
-    { name: "Telegram Daemon (@this_is_ai_signal_bot)", mode: "LIVE", desc: "24/7 cloud polling & auto-broadcast." },
-    { name: "Paper Order Sizer", mode: "PAPER", desc: "Safe simulated execution & lot calculator." }
+    { name: "Telegram Daemon (@this_is_ai_signal_bot)", mode: "LIVE", desc: "24/7 cloud polling & auto-broadcast." }
   ];
   grid.innerHTML = modules
     .map(
@@ -1247,26 +1500,27 @@ function renderFeatureFlagsPanel() {
 
 function generateCopilotReply(topic) {
   const d = currentData;
-  if (!d) return "Syncing live XAU/USD data...";
+  if (!d) return "Syncing live market data...";
   const q = topic.toLowerCase();
-  const price = d.current_price.toFixed(2);
+  const price = fmtPrice(d.current_price, d.symbol);
   const ai = d.ai_agent || {};
   const dxy = d.fundamentals?.dxy || {};
+  const stratName = STRATEGY_CATALOG[d.strategy || currentStrategy]?.name || d.strategy;
 
-  if (q.includes("swing") || q.includes("golden")) {
-    return `**${d.symbol} @ $${price} (${d.timeframe}):**\n• **Signal:** ${d.direction} (${d.confidence}%) · Golden Pocket: ${ai.watch_zone || "--"}\n• **Levels:** Entry $${d.entry.toFixed(2)} | SL $${d.stop_loss.toFixed(2)} | TP1 $${d.take_profit_1.toFixed(2)}.`;
+  if (q.includes("swing") || q.includes("golden") || q.includes("smc") || q.includes("ict")) {
+    return `**${d.symbol} @ ${price} (${d.trading_style} · ${d.timeframe}):**\n• **Active Strategy:** ${stratName}\n• **Signal:** ${d.direction} (${d.confidence}%) · Watch Zone: ${ai.watch_zone || "--"}\n• **Levels:** Entry ${fmtPrice(d.entry, d.symbol)} | SL ${fmtPrice(d.stop_loss, d.symbol)} | TP1 ${fmtPrice(d.take_profit_1, d.symbol)}.`;
   }
   if (q.includes("dxy") || q.includes("macro")) {
-    return `**Macro & DXY:**\n• **DXY:** ${dxy.price ? dxy.price.toFixed(2) : "--"} (${dxy.gold_impact || "NEUTRAL"} for Gold)\n• **News Bias:** ${d.fundamentals?.bias || "NEUTRAL"} (${d.fundamentals?.bullish_headlines || 0}B / ${d.fundamentals?.bearish_headlines || 0}S).`;
+    return `**Macro & DXY:**\n• **DXY:** ${dxy.price ? dxy.price.toFixed(2) : "--"} (${dxy.gold_impact || "NEUTRAL"} impact)\n• **News Bias:** ${d.fundamentals?.bias || "NEUTRAL"} (${d.fundamentals?.bullish_headlines || 0}B / ${d.fundamentals?.bearish_headlines || 0}S).`;
   }
   if (q.includes("risk") || q.includes("lot") || q.includes("size")) {
     const acct = parseFloat(el("riskAccountInput")?.value) || 10000;
     const rPct = parseFloat(el("riskPctInput")?.value) || 1.0;
-    const stopDist = Math.max(Math.abs(d.entry - d.stop_loss), 0.1);
-    const oz = (acct * (rPct / 100)) / stopDist;
-    return `**Position Size ($${acct.toLocaleString()} @ ${rPct}% Risk):**\n• **Stop Distance:** ${stopDist.toFixed(1)} pts\n• **Recommended:** **${oz.toFixed(2)} oz** (${(oz / 100).toFixed(2)} lots).`;
+    const stopDist = Math.max(Math.abs(d.entry - d.stop_loss), 0.0001);
+    const units = (acct * (rPct / 100)) / stopDist;
+    return `**Position Size ($${acct.toLocaleString()} @ ${rPct}% Risk):**\n• **Stop Distance:** ${stopDist.toFixed(getAssetDecimals(d.symbol))} pts\n• **Recommended:** **${units.toFixed(2)} units** (${(units / 100).toFixed(2)} lots).`;
   }
-  return `**${d.symbol} (${d.trading_style} · ${d.timeframe}):** ${d.signal} (${d.confidence}%). Entry $${d.entry.toFixed(2)} | SL $${d.stop_loss.toFixed(2)} | TP1 $${d.take_profit_1.toFixed(2)}.`;
+  return `**${d.symbol} (${d.trading_style} · ${stratName} · ${d.timeframe}):** ${d.signal} (${d.confidence}%). Entry ${fmtPrice(d.entry, d.symbol)} | SL ${fmtPrice(d.stop_loss, d.symbol)} | TP1 ${fmtPrice(d.take_profit_1, d.symbol)}.`;
 }
 
 function appendCopilotMessage(role, text) {
@@ -1319,52 +1573,103 @@ function switchWorkspaceView(viewKey) {
   }, 30);
 }
 
-function applyTradingStyleDirect(style, customTf = null) {
+function applyTradingStyleDirect(style, customTf = null, keepCustomMultipliers = false) {
   currentStyle = style;
   const cfg = STYLE_DEFAULTS[style] || STYLE_DEFAULTS.SWING;
   currentTf = customTf || cfg.tf;
+  if (!keepCustomMultipliers) {
+    currentSlMult = cfg.sl;
+    currentTp1Mult = cfg.tp1;
+    currentTp2Mult = cfg.tp2;
+  }
 
-  document.querySelectorAll("#styleGroup .style-btn").forEach((b) => {
-    b.classList.toggle("active", b.dataset.style === style);
-  });
-  document.querySelectorAll("#tfGroup .tf-btn").forEach((b) => {
-    b.classList.toggle("active", b.dataset.tf === currentTf);
-  });
-
-  if (el("btSlInput")) el("btSlInput").value = cfg.sl;
-  if (el("btTp1Input")) el("btTp1Input").value = cfg.tp1;
-  if (el("btTp2Input")) el("btTp2Input").value = cfg.tp2;
-
+  saveTradingSettingsToBackend(true);
   selectedRunDetail = null;
   fetchFullDashboard();
-  showToast(`Active Mode: ${cfg.label}`);
+  showToast(`Saved Active Mode: ${cfg.label} (${currentTf})`);
 }
 
 function switchTradingStyle(style) {
   if (style === currentStyle) return;
   const cfg = STYLE_DEFAULTS[style] || STYLE_DEFAULTS.SWING;
   openConfirmDialog({
-    title: `Switch to ${cfg.label}`,
+    title: `Switch & Save Trading Type: ${cfg.label}`,
     badge: style,
-    desc: "Change active trading style, default timeframe, and ATR risk multipliers?",
-    meta: `Timeframe: ${cfg.tf} · SL: ${cfg.sl}x ATR · TP1: ${cfg.tp1}x ATR · TP2: ${cfg.tp2}x ATR`,
-    confirmLabel: "Switch Mode ↵",
+    desc: "Switch active trading type and persist this selection so page refresh always stays on this mode?",
+    meta: `Trading Type: ${cfg.label}\nTimeframe: ${cfg.tf} · SL: ${cfg.sl}x ATR · TP1: ${cfg.tp1}x ATR · TP2: ${cfg.tp2}x ATR`,
+    confirmLabel: "Switch & Save ↵",
     onConfirm: () => applyTradingStyleDirect(style)
+  });
+}
+
+function switchStrategy(strategyCode) {
+  if (!STRATEGY_CATALOG[strategyCode] || strategyCode === currentStrategy) return;
+  const stratInfo = STRATEGY_CATALOG[strategyCode];
+  openConfirmDialog({
+    title: `Switch Bot Strategy: ${stratInfo.short}`,
+    badge: strategyCode,
+    desc: `Train & switch the live signal engine to "${stratInfo.name}" and save it to your profile?`,
+    meta: `Strategy: ${stratInfo.name}\nActive Style: ${currentStyle} (${currentTf}) · Asset: ${currentSymbol}`,
+    confirmLabel: "Activate Strategy ↵",
+    onConfirm: () => {
+      currentStrategy = strategyCode;
+      saveTradingSettingsToBackend(true);
+      renderStrategyLab();
+      selectedRunDetail = null;
+      fetchFullDashboard();
+      showToast(`Active Strategy: ${stratInfo.short}`);
+    },
+    onCancel: () => {
+      syncControlsWithState();
+    }
   });
 }
 
 function switchTimeframe(tf) {
   if (tf === currentTf) return;
   currentTf = tf;
-  document.querySelectorAll("#tfGroup .tf-btn").forEach((b) => {
-    b.classList.toggle("active", b.dataset.tf === tf);
-  });
+  saveTradingSettingsToBackend(true);
   selectedRunDetail = null;
   fetchFullDashboard();
-  showToast(`Timeframe: ${tf.toUpperCase()}`);
+  showToast(`Saved Timeframe: ${tf.toUpperCase()}`);
 }
 
 window.switchTimeframe = switchTimeframe;
+
+function promptSaveTradingSetupDialog() {
+  // Read values from Settings view if user is on Settings view, otherwise current state
+  const nextSym = currentView === "settings" && el("cfgSymbolSelect") ? el("cfgSymbolSelect").value : currentSymbol;
+  const nextStyle = currentView === "settings" && el("cfgStyleSelect") ? el("cfgStyleSelect").value : currentStyle;
+  const nextStrat = currentView === "settings" && el("cfgStrategySelect") ? el("cfgStrategySelect").value : currentStrategy;
+  const nextTf = currentView === "settings" && el("cfgTimeframeSelect") ? el("cfgTimeframeSelect").value : currentTf;
+  const nextSl = currentView === "settings" && el("cfgSlMultInput") ? parseFloat(el("cfgSlMultInput").value) || currentSlMult : currentSlMult;
+  const nextTp1 = currentView === "settings" && el("cfgTp1MultInput") ? parseFloat(el("cfgTp1MultInput").value) || currentTp1Mult : currentTp1Mult;
+  const nextTp2 = currentView === "settings" && el("cfgTp2MultInput") ? parseFloat(el("cfgTp2MultInput").value) || currentTp2Mult : currentTp2Mult;
+  const nextMinConf = currentView === "settings" && el("cfgMinConfInput") ? parseInt(el("cfgMinConfInput").value, 10) || currentMinConf : currentMinConf;
+
+  openConfirmDialog({
+    title: "Save Trading & Strategy Configuration",
+    badge: "SAVE SETUP",
+    desc: "Save this trading setup to your browser & Supabase cloud database so refreshing the page always restores it?",
+    meta: `Asset: ${ASSET_CATALOG[nextSym]?.name || nextSym}\nTrading Type: ${nextStyle} (${nextTf})\nBot Strategy: ${STRATEGY_CATALOG[nextStrat]?.name || nextStrat}\nRisk Multipliers: SL ${nextSl}x · TP1 ${nextTp1}x · TP2 ${nextTp2}x ATR (Min Conf: ${nextMinConf}%)`,
+    confirmLabel: "Save Configuration ↵",
+    onConfirm: async () => {
+      currentSymbol = nextSym;
+      currentStyle = nextStyle;
+      currentStrategy = nextStrat;
+      currentTf = nextTf;
+      currentSlMult = nextSl;
+      currentTp1Mult = nextTp1;
+      currentTp2Mult = nextTp2;
+      currentMinConf = nextMinConf;
+      await saveTradingSettingsToBackend(false);
+      renderStrategyLab();
+      selectedRunDetail = null;
+      fetchFullDashboard();
+      pollLiveTick();
+    }
+  });
+}
 
 function promptTelegramBroadcast() {
   const d = currentData;
@@ -1540,34 +1845,63 @@ function initEventListeners() {
 
   if (el("themeToggleBtn")) el("themeToggleBtn").addEventListener("click", toggleTheme);
 
-  // Style, Symbol & Timeframe Controls
+  // Style, Strategy, Symbol & Timeframe Controls
   document.querySelectorAll("#styleGroup .style-btn").forEach((btn) => {
     btn.addEventListener("click", () => switchTradingStyle(btn.dataset.style));
   });
   document.querySelectorAll("#tfGroup .tf-btn").forEach((btn) => {
     btn.addEventListener("click", () => switchTimeframe(btn.dataset.tf));
   });
+  if (el("strategySelect")) {
+    el("strategySelect").addEventListener("change", (e) => {
+      switchStrategy(e.target.value);
+    });
+  }
   if (el("symbolSelect")) {
     el("symbolSelect").addEventListener("change", (e) => {
       const nextSym = e.target.value;
       const prevSym = currentSymbol;
+      const nextName = ASSET_CATALOG[nextSym]?.name || nextSym;
       openConfirmDialog({
-        title: "Switch Broker Feed",
-        badge: "FEED",
-        desc: `Change active XAU/USD data source to ${nextSym}?`,
-        meta: `Previous: ${prevSym} → New: ${nextSym}`,
-        confirmLabel: "Switch Feed ↵",
+        title: "Switch Active Market Asset",
+        badge: "MARKET FEED",
+        desc: `Change active market feed to ${nextName} and save it as your active asset?`,
+        meta: `Previous: ${prevSym} → New: ${nextSym} (${nextName})`,
+        confirmLabel: "Switch & Save ↵",
         onConfirm: () => {
           currentSymbol = nextSym;
           selectedRunDetail = null;
+          saveTradingSettingsToBackend(true);
           fetchFullDashboard();
           pollLiveTick();
-          showToast(`Feed: ${nextSym}`);
+          showToast(`Active Feed: ${nextName}`);
         },
         onCancel: () => {
           e.target.value = prevSym;
         }
       });
+    });
+  }
+
+  // Save Trading Setup Buttons (Header & Settings View)
+  if (el("saveSetupQuickBtn")) {
+    el("saveSetupQuickBtn").addEventListener("click", promptSaveTradingSetupDialog);
+  }
+  if (el("saveTradingSettingsBtn")) {
+    el("saveTradingSettingsBtn").addEventListener("click", promptSaveTradingSetupDialog);
+  }
+
+  // Auto-fill default multipliers when changing Trading Style inside Settings View
+  if (el("cfgStyleSelect")) {
+    el("cfgStyleSelect").addEventListener("change", (e) => {
+      const st = e.target.value;
+      const cfg = STYLE_DEFAULTS[st];
+      if (cfg) {
+        if (el("cfgTimeframeSelect")) el("cfgTimeframeSelect").value = cfg.tf;
+        if (el("cfgSlMultInput")) el("cfgSlMultInput").value = cfg.sl;
+        if (el("cfgTp1MultInput")) el("cfgTp1MultInput").value = cfg.tp1;
+        if (el("cfgTp2MultInput")) el("cfgTp2MultInput").value = cfg.tp2;
+      }
     });
   }
 
@@ -1824,18 +2158,19 @@ function initEventListeners() {
   // Backtest Runner (with Confirmation Dialog) & Ledger Tabs
   if (el("runBacktestBtn")) {
     el("runBacktestBtn").addEventListener("click", () => {
-      const uiStrat = el("btStrategySelect")?.value || "ALL";
+      const uiStrat = el("btStrategySelect")?.value || currentStrategy;
       const horizonKey = el("btHorizonSelect")?.value || "30d";
       const durCfg = DURATION_BARS_MAP[horizonKey] || DURATION_BARS_MAP["30d"];
-      const sl = parseFloat(el("btSlInput")?.value) || 1.5;
-      const tp1 = parseFloat(el("btTp1Input")?.value) || 2.5;
-      const tp2 = parseFloat(el("btTp2Input")?.value) || 4.0;
+      const sl = parseFloat(el("btSlInput")?.value) || currentSlMult;
+      const tp1 = parseFloat(el("btTp1Input")?.value) || currentTp1Mult;
+      const tp2 = parseFloat(el("btTp2Input")?.value) || currentTp2Mult;
+      const stratName = STRATEGY_CATALOG[uiStrat]?.short || uiStrat;
 
       openConfirmDialog({
         title: "Run Deep Historical Backtest",
         badge: "BACKTEST",
         desc: "Execute walk-forward simulation and persist the run to Supabase PostgreSQL?",
-        meta: `Symbol: ${currentSymbol} (${currentStyle} · ${currentTf})\nHorizon: ${durCfg.bars} bars (${durCfg.preset})\nMultipliers: SL ${sl}x · TP1 ${tp1}x · TP2 ${tp2}x ATR`,
+        meta: `Symbol: ${currentSymbol} (${currentStyle} · ${stratName} · ${currentTf})\nHorizon: ${durCfg.bars} bars (${durCfg.preset})\nMultipliers: SL ${sl}x · TP1 ${tp1}x · TP2 ${tp2}x ATR`,
         confirmLabel: "Run & Save ↵",
         onConfirm: async () => {
           const btn = el("runBacktestBtn");
@@ -1847,6 +2182,7 @@ function initEventListeners() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 trading_style: currentStyle,
+                strategy: uiStrat,
                 symbol: currentSymbol,
                 interval: currentTf,
                 strategy_mode: STRATEGY_MODE_MAP[uiStrat] || "PRO_CONFIRMED",
@@ -1854,7 +2190,8 @@ function initEventListeners() {
                 bars_tested: durCfg.bars,
                 sl_mult: sl,
                 tp1_mult: tp1,
-                tp2_mult: tp2
+                tp2_mult: tp2,
+                min_confidence: currentMinConf
               })
             });
             const data = await res.json();
@@ -1932,6 +2269,8 @@ function initEventListeners() {
 // 12. INITIALIZE ON DOM READY
 // ============================================================================
 document.addEventListener("DOMContentLoaded", () => {
+  loadSavedConfigFromLocal();
+  syncControlsWithState();
   renderStrategyLab();
   renderFeatureFlagsPanel();
   initCommandPalette();

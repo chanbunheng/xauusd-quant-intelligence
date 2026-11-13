@@ -22,15 +22,19 @@ import os
 import threading
 import time
 import traceback
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from analyze_gold_5m import (
+    SUPPORTED_ASSETS,
+    TRADING_STRATEGIES,
     TRADING_STYLES,
     analyze_timeframe,
     broadcast_telegram_signal,
     fetch_fundamental_analysis,
     fetch_live_tv_tick,
+    get_saved_trading_config,
     run_and_store_backtest,
     sync_telegram_updates,
     verify_telegram_bot,
@@ -51,17 +55,19 @@ from db import (
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "8765"))
-ALLOWED_SYMBOLS = ("FX:XAUUSD", "OANDA:XAUUSD", "FOREXCOM:XAUUSD")
-ALLOWED_STYLES = ("SWING", "INTRADAY", "SCALPING", "POSITION")
+ALLOWED_SYMBOLS = tuple(SUPPORTED_ASSETS.keys())
+ALLOWED_STYLES = tuple(TRADING_STYLES.keys())
+ALLOWED_STRATEGIES = tuple(TRADING_STRATEGIES.keys())
 ALLOWED_INTERVALS = ("1m", "5m", "15m", "1h", "4h", "1d")
+TZ_UTC7 = timezone(timedelta(hours=7))
 
 
 def _telegram_background_worker():
     """
     24/7 Cloud Background Daemon:
     1. Every 5s: Polls @this_is_ai_signal_bot for /start, /swing, /intraday, /scalp, /news commands.
-    2. Every 60s: Runs autonomous Swing (1h) & Intraday (15m) AI Agent scans on OANDA:XAUUSD so new signals
-       and TP/SL hits are recorded to Supabase & pushed to Telegram even with zero browsers open.
+    2. Every 60s: Runs autonomous AI Agent scans using the user's saved symbol, trading style, and strategy
+       so new signals and TP/SL hits are recorded to Supabase & pushed to Telegram even with zero browsers open.
     """
     last_auto_scan = 0.0
     while True:
@@ -73,16 +79,21 @@ def _telegram_background_worker():
         now_ts = time.time()
         if now_ts - last_auto_scan >= 60.0:
             last_auto_scan = now_ts
-            for style, tf in (("SWING", "1h"), ("INTRADAY", "15m")):
-                try:
-                    analyze_timeframe(
-                        symbol="OANDA:XAUUSD",
-                        interval=tf,
-                        trading_style=style,
-                        include_series=False,
-                    )
-                except Exception:
-                    pass
+            try:
+                cfg = get_saved_trading_config()
+                analyze_timeframe(
+                    symbol=cfg["symbol"],
+                    interval=cfg["timeframe"],
+                    trading_style=cfg["trading_style"],
+                    strategy=cfg["strategy"],
+                    sl_mult=cfg["sl_mult"],
+                    tp1_mult=cfg["tp1_mult"],
+                    tp2_mult=cfg["tp2_mult"],
+                    min_confidence=cfg["min_confidence"],
+                    include_series=False,
+                )
+            except Exception:
+                pass
 
         time.sleep(5)
 
@@ -157,13 +168,40 @@ class DashboardHandler(BaseHTTPRequestHandler):
             })
             return
 
-        symbol = qs.get("symbol", ["OANDA:XAUUSD"])[0]
+        saved_cfg = get_saved_trading_config()
+        symbol = qs.get("symbol", [saved_cfg["symbol"]])[0]
         if symbol not in ALLOWED_SYMBOLS:
             symbol = "OANDA:XAUUSD"
 
-        style = qs.get("style", ["SWING"])[0].upper()
+        style = qs.get("style", [saved_cfg["trading_style"]])[0].upper()
         if style not in ALLOWED_STYLES:
-            style = "SWING"
+            style = saved_cfg["trading_style"]
+
+        strategy = qs.get("strategy", [saved_cfg["strategy"]])[0].upper()
+        if strategy not in ALLOWED_STRATEGIES:
+            strategy = saved_cfg["strategy"]
+
+        def _opt_float(key):
+            val = qs.get(key, [None])[0]
+            try:
+                return float(val) if val is not None else None
+            except Exception:
+                return None
+
+        sl_mult_qs = _opt_float("sl_mult")
+        tp1_mult_qs = _opt_float("tp1_mult")
+        tp2_mult_qs = _opt_float("tp2_mult")
+        min_conf_qs = _opt_float("min_conf")
+
+        if path == "/api/settings":
+            self._send_json({
+                "ok": True,
+                "saved_settings": saved_cfg,
+                "supported_assets": SUPPORTED_ASSETS,
+                "trading_styles": TRADING_STYLES,
+                "trading_strategies": TRADING_STRATEGIES,
+            })
+            return
 
         if path == "/api/tick":
             try:
@@ -192,6 +230,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     symbol=symbol,
                     interval=interval,
                     trading_style=style,
+                    strategy=strategy,
+                    sl_mult=sl_mult_qs,
+                    tp1_mult=tp1_mult_qs,
+                    tp2_mult=tp2_mult_qs,
+                    min_confidence=int(min_conf_qs) if min_conf_qs is not None else None,
                     include_series=True,
                 )
                 self._send_json(data)
@@ -208,11 +251,17 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         symbol=symbol,
                         interval=tf,
                         trading_style=style,
+                        strategy=strategy,
+                        sl_mult=sl_mult_qs,
+                        tp1_mult=tp1_mult_qs,
+                        tp2_mult=tp2_mult_qs,
+                        min_confidence=int(min_conf_qs) if min_conf_qs is not None else None,
                         include_series=False,
                     )
                     mtf[tf] = {
                         "timeframe": tf,
                         "trading_style": style,
+                        "strategy": strategy,
                         "direction": res["direction"],
                         "signal": res["signal"],
                         "confidence": res["confidence"],
@@ -226,7 +275,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         "ema21": res["indicators"]["ema21"],
                         "ema50": res["indicators"]["ema50"],
                     }
-                self._send_json({"mtf": mtf, "mtf_order": mtf_list, "trading_style": style})
+                self._send_json({"mtf": mtf, "mtf_order": mtf_list, "trading_style": style, "strategy": strategy})
             except Exception as exc:
                 self._send_json({"error": str(exc)}, status=500)
             return
@@ -237,6 +286,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 status = verify_telegram_bot(force=force)
                 settings = get_all_settings()
                 status["has_gemini_key"] = bool(settings.get("gemini_api_key", "").strip())
+                status["saved_settings"] = saved_cfg
                 self._send_json(status)
             except Exception as exc:
                 self._send_json({"error": str(exc)}, status=500)
@@ -289,36 +339,42 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/backtest/run":
             try:
-                symbol = body.get("symbol", "OANDA:XAUUSD")
+                saved_cfg = get_saved_trading_config()
+                symbol = body.get("symbol", saved_cfg["symbol"])
                 if symbol not in ALLOWED_SYMBOLS:
                     symbol = "OANDA:XAUUSD"
-                trading_style = body.get("trading_style", "SWING").upper()
+                trading_style = body.get("trading_style", saved_cfg["trading_style"]).upper()
                 if trading_style not in ALLOWED_STYLES:
-                    trading_style = "SWING"
+                    trading_style = saved_cfg["trading_style"]
                 style_cfg = TRADING_STYLES[trading_style]
+
+                strategy = body.get("strategy", saved_cfg["strategy"]).upper()
+                if strategy not in ALLOWED_STRATEGIES:
+                    strategy = saved_cfg["strategy"]
 
                 interval = body.get("interval", style_cfg["default_tf"])
                 if interval not in ALLOWED_INTERVALS:
                     interval = style_cfg["default_tf"]
                 strategy_mode = body.get("strategy_mode", "PRO_CONFIRMED")
-                if strategy_mode not in ("PRO_CONFIRMED", "TREND_ONLY", "MEAN_REVERSION", "HIGH_CONFIDENCE"):
-                    strategy_mode = "PRO_CONFIRMED"
                 duration_preset = body.get("duration_preset", "450_BARS")
                 bars_tested = int(body.get("bars_tested", 450))
                 sl_mult = float(body.get("sl_mult", style_cfg["sl_mult"]))
                 tp1_mult = float(body.get("tp1_mult", style_cfg["tp1_mult"]))
                 tp2_mult = float(body.get("tp2_mult", style_cfg["tp2_mult"]))
+                min_confidence = int(float(body.get("min_confidence", saved_cfg["min_confidence"])))
 
                 detail = run_and_store_backtest(
                     symbol=symbol,
                     interval=interval,
                     trading_style=trading_style,
+                    strategy=strategy,
                     strategy_mode=strategy_mode,
                     bars_tested=bars_tested,
                     duration_preset=duration_preset,
                     sl_mult=sl_mult,
                     tp1_mult=tp1_mult,
                     tp2_mult=tp2_mult,
+                    min_confidence=min_confidence,
                 )
                 runs = get_backtest_runs(limit=50)
                 self._send_json({"detail": detail, "runs": runs})
@@ -353,12 +409,16 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/telegram/send":
             try:
-                symbol = body.get("symbol", "OANDA:XAUUSD")
+                saved_cfg = get_saved_trading_config()
+                symbol = body.get("symbol", saved_cfg["symbol"])
                 if symbol not in ALLOWED_SYMBOLS:
                     symbol = "OANDA:XAUUSD"
-                style = body.get("trading_style", "SWING").upper()
+                style = body.get("trading_style", saved_cfg["trading_style"]).upper()
                 if style not in ALLOWED_STYLES:
-                    style = "SWING"
+                    style = saved_cfg["trading_style"]
+                strategy = body.get("strategy", saved_cfg["strategy"]).upper()
+                if strategy not in ALLOWED_STRATEGIES:
+                    strategy = saved_cfg["strategy"]
                 interval = body.get("interval", TRADING_STYLES[style]["default_tf"])
                 if interval not in ALLOWED_INTERVALS:
                     interval = TRADING_STYLES[style]["default_tf"]
@@ -370,6 +430,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     symbol=symbol,
                     interval=interval,
                     trading_style=style,
+                    strategy=strategy,
                     include_series=False,
                 )
                 send_res = broadcast_telegram_signal(
@@ -391,10 +452,39 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     set_setting("gemini_api_key", str(body["gemini_api_key"]).strip())
                 if "remove_chat_id" in body and body["remove_chat_id"]:
                     remove_telegram_subscriber(body["remove_chat_id"])
+
+                # Persist user's Trading Setup (Symbol, Trading Type, Strategy, Timeframe, SL/TP, Risk)
+                trading_keys = {
+                    "saved_symbol": lambda v: str(v) if str(v) in ALLOWED_SYMBOLS else None,
+                    "saved_trading_style": lambda v: str(v).upper() if str(v).upper() in ALLOWED_STYLES else None,
+                    "saved_strategy": lambda v: str(v).upper() if str(v).upper() in ALLOWED_STRATEGIES else None,
+                    "saved_timeframe": lambda v: str(v) if str(v) in ALLOWED_INTERVALS else None,
+                    "saved_sl_mult": lambda v: str(round(float(v), 2)),
+                    "saved_tp1_mult": lambda v: str(round(float(v), 2)),
+                    "saved_tp2_mult": lambda v: str(round(float(v), 2)),
+                    "saved_min_conf": lambda v: str(int(float(v))),
+                    "saved_account_balance": lambda v: str(round(float(v), 2)),
+                    "saved_risk_pct": lambda v: str(round(float(v), 2)),
+                }
+                updated_any = False
+                for k, validator in trading_keys.items():
+                    if k in body and body[k] is not None:
+                        try:
+                            clean_val = validator(body[k])
+                            if clean_val is not None:
+                                set_setting(k, clean_val)
+                                updated_any = True
+                        except Exception:
+                            pass
+                if updated_any:
+                    now_local = datetime.now(TZ_UTC7).strftime("%Y-%m-%d %H:%M:%S UTC+7")
+                    set_setting("saved_config_updated_at", now_local)
+
                 status = verify_telegram_bot(force=False)
                 settings = get_all_settings()
                 status["has_gemini_key"] = bool(settings.get("gemini_api_key", "").strip())
-                self._send_json({"ok": True, "telegram": status})
+                saved_cfg = get_saved_trading_config()
+                self._send_json({"ok": True, "telegram": status, "saved_settings": saved_cfg})
             except Exception as exc:
                 self._send_json({"error": str(exc)}, status=500)
             return

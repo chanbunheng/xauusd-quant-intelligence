@@ -147,16 +147,46 @@
 
         <div class="controls">
           <div class="style-group" id="styleGroup">
-            <button class="style-btn active" data-style="SWING">Swing ★</button>
+            <button class="style-btn active" data-style="SWING">Swing</button>
             <button class="style-btn" data-style="INTRADAY">Intraday</button>
             <button class="style-btn" data-style="SCALPING">Scalp</button>
             <button class="style-btn" data-style="POSITION">Position</button>
           </div>
 
-          <select id="symbolSelect" class="ctrl-select" aria-label="Broker">
-            <option value="OANDA:XAUUSD" selected>OANDA</option>
-            <option value="FX:XAUUSD">FXCM</option>
-            <option value="FOREXCOM:XAUUSD">FOREX.com</option>
+          <select id="strategySelect" class="ctrl-select" aria-label="Trading Strategy" title="Select AI Bot Strategy">
+            <option value="FLEXIBLE_HYBRID" selected>✦ Strategy: Flexible AI Hybrid</option>
+            <option value="SMC_ORDER_BLOCK">SMC (BOS + Order Block + FVG)</option>
+            <option value="ICT_SILVER_BULLET">ICT Silver Bullet (Sweep + OTE)</option>
+            <option value="TREND_PULLBACK">Trend Pullback (EMA Ribbon)</option>
+            <option value="FIB_GOLDEN_POCKET">Fib Golden Pocket (38.2–61.8%)</option>
+            <option value="WYCKOFF_VSA">Wyckoff Spring / Upthrust + VSA</option>
+            <option value="BOLLINGER_MEAN_REV">Bollinger 2σ + RSI Exhaustion</option>
+            <option value="TURTLE_BREAKOUT">Momentum &amp; Structure Breakout</option>
+          </select>
+
+          <select id="symbolSelect" class="ctrl-select" aria-label="Market Instrument" title="Select Market Asset (OANDA Exclusive for XAU/USD)">
+            <optgroup label="Precious Metals (OANDA Exclusive)">
+              <option value="OANDA:XAUUSD" selected>Gold (XAU/USD · OANDA)</option>
+              <option value="OANDA:XAGUSD">Silver (XAG/USD · OANDA)</option>
+            </optgroup>
+            <optgroup label="Crypto Majors">
+              <option value="BINANCE:BTCUSDT">Bitcoin (BTC/USDT)</option>
+              <option value="BINANCE:ETHUSDT">Ethereum (ETH/USDT)</option>
+              <option value="BINANCE:SOLUSDT">Solana (SOL/USDT)</option>
+            </optgroup>
+            <optgroup label="US Indices">
+              <option value="OANDA:SPX500USD">S&amp;P 500 (SPX500)</option>
+              <option value="OANDA:NAS100USD">Nasdaq 100 (NAS100)</option>
+            </optgroup>
+            <optgroup label="Major Forex">
+              <option value="OANDA:EURUSD">EUR/USD</option>
+              <option value="OANDA:GBPUSD">GBP/USD</option>
+              <option value="OANDA:USDJPY">USD/JPY</option>
+            </optgroup>
+            <optgroup label="Top Stocks">
+              <option value="NASDAQ:NVDA">NVIDIA (NVDA)</option>
+              <option value="NASDAQ:AAPL">Apple (AAPL)</option>
+            </optgroup>
           </select>
 
           <div class="tf-group" id="tfGroup">
@@ -168,6 +198,7 @@
             <button class="tf-btn" data-tf="1d">1D</button>
           </div>
 
+          <button class="btn" id="saveSetupQuickBtn" title="Save Active Trading Setup (Style, Strategy, Asset &amp; Risk)">💾 Save Setup</button>
           <button class="btn" id="themeToggleBtn" title="Toggle Theme">☀/☾</button>
           <button class="btn tg-btn" id="sendTelegramQuickBtn">Telegram ↗</button>
           <button class="btn primary" id="refreshBtn">Sync</button>
@@ -609,11 +640,14 @@
               <div class="card-title">⚡ Deep Historical Backtest Engine</div>
               <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
                 <select id="btStrategySelect" class="ctrl-select">
-                  <option value="ALL" selected>All Strategies</option>
-                  <option value="SWING_GOLDEN_POCKET">Swing Golden Pocket</option>
-                  <option value="PRO_TREND_PULLBACK">EMA Pullback</option>
-                  <option value="LIQUIDITY_SWEEP_REVERSAL">Liquidity Sweep</option>
-                  <option value="MOMENTUM_BREAKOUT">Momentum Breakout</option>
+                  <option value="FLEXIBLE_HYBRID" selected>Flexible AI Hybrid (All Strategies)</option>
+                  <option value="SMC_ORDER_BLOCK">SMC (BOS + Order Block + FVG)</option>
+                  <option value="ICT_SILVER_BULLET">ICT Silver Bullet (Sweep + OTE)</option>
+                  <option value="TREND_PULLBACK">Trend Pullback (EMA Ribbon)</option>
+                  <option value="FIB_GOLDEN_POCKET">Fibonacci Golden Pocket</option>
+                  <option value="WYCKOFF_VSA">Wyckoff Spring / Upthrust + VSA</option>
+                  <option value="BOLLINGER_MEAN_REV">Bollinger 2σ + RSI Exhaustion</option>
+                  <option value="TURTLE_BREAKOUT">Momentum &amp; Structure Breakout</option>
                 </select>
                 <select id="btHorizonSelect" class="ctrl-select">
                   <option value="300">300 Bars</option>
@@ -799,9 +833,100 @@
         </div>
 
         <!-- ================================================================
-             VIEW 7: SETTINGS, PRICE ALERTS & FEATURE FLAGS
+             VIEW 7: SETTINGS, PERSISTENT TRADING SETUP, PRICE ALERTS & FLAGS
              ================================================================ -->
         <div class="workspace-view hidden-view" id="view-settings" data-view="settings">
+          <!-- Persistent Trading & Strategy Settings Card -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>💾 Saved Trading &amp; Bot Strategy Configuration</span>
+                <span id="savedSetupTimestamp" style="font-size:10.5px;color:var(--gold-bright);font-weight:700;">Persisted on Refresh &amp; Cloud DB</span>
+              </div>
+              <button class="btn primary" id="saveTradingSettingsBtn">💾 Save Trading Settings</button>
+            </div>
+
+            <div style="font-size:11.5px;color:var(--text-1);margin-bottom:10px;">
+              Your selected <strong>Market Asset</strong>, <strong>Trading Style</strong> (Scalp, Intraday, Swing, Position), <strong>Bot Strategy</strong> (SMC, ICT, Trend Pullback, Flexible AI, etc.), and <strong>ATR Risk Multipliers</strong> are saved automatically to your browser and Supabase PostgreSQL so refreshing the page always restores your exact setup.
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:10px;font-size:11px;">
+              <div>
+                <label style="color:var(--text-2);font-size:10px;font-weight:700;">DEFAULT MARKET ASSET</label>
+                <select id="cfgSymbolSelect" class="ctrl-select" style="width:100%;margin-top:4px;padding:7px 9px;">
+                  <option value="OANDA:XAUUSD">Gold (XAU/USD · OANDA Exclusive)</option>
+                  <option value="OANDA:XAGUSD">Silver (XAG/USD · OANDA)</option>
+                  <option value="BINANCE:BTCUSDT">Bitcoin (BTC/USDT)</option>
+                  <option value="BINANCE:ETHUSDT">Ethereum (ETH/USDT)</option>
+                  <option value="BINANCE:SOLUSDT">Solana (SOL/USDT)</option>
+                  <option value="OANDA:SPX500USD">S&amp;P 500 Index (SPX500)</option>
+                  <option value="OANDA:NAS100USD">Nasdaq 100 Tech (NAS100)</option>
+                  <option value="OANDA:EURUSD">EUR/USD Major Forex</option>
+                  <option value="OANDA:GBPUSD">GBP/USD Cable Forex</option>
+                  <option value="OANDA:USDJPY">USD/JPY Yen Forex</option>
+                  <option value="NASDAQ:NVDA">NVIDIA Corp (NVDA)</option>
+                  <option value="NASDAQ:AAPL">Apple Inc (AAPL)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="color:var(--text-2);font-size:10px;font-weight:700;">TRADING TYPE (NO FORCED DEFAULT)</label>
+                <select id="cfgStyleSelect" class="ctrl-select" style="width:100%;margin-top:4px;padding:7px 9px;">
+                  <option value="SCALPING">Scalping (1m / 5m Fast Burst)</option>
+                  <option value="INTRADAY">Intraday Session (15m / 5m)</option>
+                  <option value="SWING">Swing Trade (1H / 4H Wave)</option>
+                  <option value="POSITION">Position Trade (4H / 1D Macro)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="color:var(--text-2);font-size:10px;font-weight:700;">BOT STRATEGY ALGORITHM</label>
+                <select id="cfgStrategySelect" class="ctrl-select" style="width:100%;margin-top:4px;padding:7px 9px;">
+                  <option value="FLEXIBLE_HYBRID">Flexible AI Hybrid (All 7 Strategies)</option>
+                  <option value="SMC_ORDER_BLOCK">SMC (BOS + Order Block + FVG)</option>
+                  <option value="ICT_SILVER_BULLET">ICT Silver Bullet (Liquidity Sweep + OTE)</option>
+                  <option value="TREND_PULLBACK">Trend Pullback (EMA 9/21/50/200)</option>
+                  <option value="FIB_GOLDEN_POCKET">Fibonacci Golden Pocket (38.2–61.8%)</option>
+                  <option value="WYCKOFF_VSA">Wyckoff Spring / Upthrust + VSA</option>
+                  <option value="BOLLINGER_MEAN_REV">Bollinger 2σ + RSI Exhaustion</option>
+                  <option value="TURTLE_BREAKOUT">Donchian &amp; Volatility Breakout</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="color:var(--text-2);font-size:10px;font-weight:700;">PREFERRED TIMEFRAME</label>
+                <select id="cfgTimeframeSelect" class="ctrl-select" style="width:100%;margin-top:4px;padding:7px 9px;">
+                  <option value="1m">1 Minute (1m)</option>
+                  <option value="5m">5 Minutes (5m)</option>
+                  <option value="15m">15 Minutes (15m)</option>
+                  <option value="1h">1 Hour (1h)</option>
+                  <option value="4h">4 Hours (4h)</option>
+                  <option value="1d">1 Day (1D)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="color:var(--text-2);font-size:10px;font-weight:700;">STOP LOSS (ATR MULTIPLIER)</label>
+                <input type="number" id="cfgSlMultInput" value="1.5" step="0.1" min="0.4" max="5.0" style="width:100%;margin-top:4px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:6px 9px;border-radius:6px;font-family:var(--font-mono);" />
+              </div>
+
+              <div>
+                <label style="color:var(--text-2);font-size:10px;font-weight:700;">TAKE PROFIT 1 (BE TRIGGER ATR)</label>
+                <input type="number" id="cfgTp1MultInput" value="2.5" step="0.1" min="0.5" max="8.0" style="width:100%;margin-top:4px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:6px 9px;border-radius:6px;font-family:var(--font-mono);" />
+              </div>
+
+              <div>
+                <label style="color:var(--text-2);font-size:10px;font-weight:700;">TAKE PROFIT 2 (RUNNER ATR)</label>
+                <input type="number" id="cfgTp2MultInput" value="4.0" step="0.1" min="1.0" max="12.0" style="width:100%;margin-top:4px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:6px 9px;border-radius:6px;font-family:var(--font-mono);" />
+              </div>
+
+              <div>
+                <label style="color:var(--text-2);font-size:10px;font-weight:700;">MIN SIGNAL CONFIDENCE (%)</label>
+                <input type="number" id="cfgMinConfInput" value="70" step="1" min="50" max="95" style="width:100%;margin-top:4px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:6px 9px;border-radius:6px;font-family:var(--font-mono);" />
+              </div>
+            </div>
+          </div>
+
           <div class="equal-grid">
             <div class="card">
               <div class="card-header">
@@ -820,7 +945,7 @@
                 <span id="activeAlertStatus" style="font-size:10.5px;color:var(--text-2);">Inactive</span>
               </div>
               <div style="display:flex;gap:8px;align-items:center;">
-                <input type="number" id="alertPriceInput" placeholder="Target XAU/USD Price ($)" step="0.5" style="flex:1;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:7px 10px;border-radius:7px;font-size:11.5px;font-family:var(--font-mono);" />
+                <input type="number" id="alertPriceInput" placeholder="Target Price ($)" step="0.5" style="flex:1;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:7px 10px;border-radius:7px;font-size:11.5px;font-family:var(--font-mono);" />
                 <button class="btn" id="setAlertBtn">Set Alert</button>
               </div>
             </div>
