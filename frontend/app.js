@@ -806,6 +806,21 @@ function renderAiAgentLayer(ai) {
   }
   if (el("aiExecSummary")) el("aiExecSummary").textContent = ai.executive_summary;
 
+  if (el("aiKillzoneBadge") && ai.killzone) {
+    const kz = ai.killzone;
+    const kzIcon = kz.in_killzone ? "🟢" : "🟡";
+    el("aiKillzoneBadge").textContent = `${kzIcon} ${kz.session_name} (${kz.liquidity_grade})`;
+    el("aiKillzoneBadge").style.color = kz.in_killzone ? "var(--buy)" : "var(--gold-bright)";
+  }
+  if (el("aiSkillsLoadedWrap") && Array.isArray(ai.skills_loaded)) {
+    el("aiSkillsLoadedWrap").innerHTML = ai.skills_loaded
+      .map(
+        (sk) =>
+          `<span title="${escapeHtml(sk.description || "")}" style="font-size:10px;background:var(--bg-1);border:1px solid var(--border);color:var(--ai-accent);padding:2px 8px;border-radius:6px;font-family:var(--font-mono);">SKILL: ${escapeHtml(sk.filename || sk.name)}</span>`
+      )
+      .join("");
+  }
+
   const grid = el("aiCommitteeGrid");
   if (!grid) return;
   grid.innerHTML = (ai.agents || [])
@@ -2257,6 +2272,8 @@ function initEventListeners() {
       }
       const exitRule = el("btExitRuleSelect")?.value || "TP1_ONLY";
       const exitLabel = exitRule === "BE_RUNNER" ? "50% TP1 + BE → TP2" : "100% Close at TP1 (No BE)";
+      const killzoneOnly = el("btSessionFilterSelect")?.value === "KILLZONES";
+      const sessionLabel = killzoneOnly ? "ICT Killzones Only (London/NY)" : "All Sessions (24h)";
       const riskUsd = Math.max(1, parseFloat(el("btRiskUsdInput")?.value) || currentRiskUsd || 10);
       currentRiskUsd = riskUsd;
       const durCfg = DURATION_BARS_MAP[horizonKey] || DURATION_BARS_MAP["30d"];
@@ -2270,7 +2287,7 @@ function initEventListeners() {
         title: "Run Deep Historical Backtest",
         badge: "BACKTEST",
         desc: "Execute walk-forward simulation and persist the run to Supabase PostgreSQL?",
-        meta: `Symbol: ${currentSymbol} (${currentStyle} · ${stratName} · ${currentTf})\nHorizon: ${horizonMeta}\nExit Rule: ${exitLabel} · Risk: $${riskUsd.toFixed(0)}/trade (min 0.01 lot)\nMultipliers: SL ${sl}x · TP1 ${tp1}x · TP2 ${tp2}x ATR`,
+        meta: `Symbol: ${currentSymbol} (${currentStyle} · ${stratName} · ${currentTf})\nHorizon: ${horizonMeta} · ${sessionLabel}\nExit Rule: ${exitLabel} · Risk: $${riskUsd.toFixed(0)}/trade (min 0.01 lot)\nMultipliers: SL ${sl}x · TP1 ${tp1}x · TP2 ${tp2}x ATR`,
         confirmLabel: "Run & Save ↵",
         onConfirm: async () => {
           const btn = el("runBacktestBtn");
@@ -2287,6 +2304,7 @@ function initEventListeners() {
               bars_tested: isCustom ? 5000 : durCfg.bars,
               exit_rule: exitRule,
               risk_usd: riskUsd,
+              killzone_only: killzoneOnly,
               sl_mult: sl,
               tp1_mult: tp1,
               tp2_mult: tp2,

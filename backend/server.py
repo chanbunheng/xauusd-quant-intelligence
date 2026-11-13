@@ -363,6 +363,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 if exit_rule not in ("TP1_ONLY", "BE_RUNNER"):
                     exit_rule = "TP1_ONLY"
                 risk_usd = max(1.0, float(body.get("risk_usd", saved_cfg.get("risk_usd", 10.0))))
+                killzone_only = bool(body.get("killzone_only", False))
                 bars_tested = int(body.get("bars_tested", 450))
                 sl_mult = float(body.get("sl_mult", style_cfg["sl_mult"]))
                 tp1_mult = float(body.get("tp1_mult", style_cfg["tp1_mult"]))
@@ -381,6 +382,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     end_date=end_date,
                     exit_rule=exit_rule,
                     risk_usd=risk_usd,
+                    killzone_only=killzone_only,
                     sl_mult=sl_mult,
                     tp1_mult=tp1_mult,
                     tp2_mult=tp2_mult,

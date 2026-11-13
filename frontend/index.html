@@ -539,11 +539,17 @@
             <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:9px;padding:12px;">
               <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
                 <strong style="font-size:13px;color:var(--text-0);" id="aiVerdictTitle">Evaluating...</strong>
-                <span id="fibGoldenBadge" class="tabular" style="font-size:10.5px;background:var(--gold-dim);color:var(--gold-bright);padding:2px 8px;border-radius:99px;font-weight:700;">
-                  Golden Pocket: --
-                </span>
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                  <span id="aiKillzoneBadge" class="tabular" style="font-size:10.5px;background:var(--bg-1);border:1px solid var(--border);color:var(--text-1);padding:2px 8px;border-radius:99px;font-weight:700;">
+                    Session: --
+                  </span>
+                  <span id="fibGoldenBadge" class="tabular" style="font-size:10.5px;background:var(--gold-dim);color:var(--gold-bright);padding:2px 8px;border-radius:99px;font-weight:700;">
+                    Golden Pocket: --
+                  </span>
+                </div>
               </div>
               <div style="font-size:11.5px;color:var(--text-1);" id="aiExecSummary">Syncing AI summary...</div>
+              <div id="aiSkillsLoadedWrap" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"></div>
             </div>
 
             <div class="ai-committee-grid" id="aiCommitteeGrid"></div>
@@ -674,6 +680,10 @@
                 <select id="btExitRuleSelect" class="ctrl-select" title="Backtest Exit Rule">
                   <option value="TP1_ONLY" selected>Exit: 100% TP1 (No BE)</option>
                   <option value="BE_RUNNER">Exit: 50% TP1 + BE → TP2</option>
+                </select>
+                <select id="btSessionFilterSelect" class="ctrl-select" title="Session / ICT Killzone Filter">
+                  <option value="ALL" selected>Session: All 24h</option>
+                  <option value="KILLZONES">Session: ICT Killzones Only</option>
                 </select>
                 <label style="font-size:10.5px;color:var(--text-2);">Risk $ <input type="number" id="btRiskUsdInput" value="10" min="1" step="1" style="width:48px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:3px 5px;border-radius:5px;font-size:10.5px;" /></label>
                 <label style="font-size:10.5px;color:var(--text-2);">SL <input type="number" id="btSlInput" value="1.5" step="0.1" style="width:46px;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:3px 5px;border-radius:5px;font-size:10.5px;" /></label>

@@ -25,6 +25,7 @@ import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from db import (
     DEFAULT_TELEGRAM_TOKEN,
@@ -222,6 +223,99 @@ DURATION_PRESETS = {
 _FUNDAMENTAL_CACHE = {"ts": 0.0, "data": None}
 _BOT_INFO_CACHE = {"ts": 0.0, "data": None}
 _GEMINI_AGENT_CACHE = {}
+_SKILLS_CACHE = None
+NY_TZ = ZoneInfo("America/New_York")
+
+
+def load_trading_skills():
+    """Loads modular SKILL.md playbooks from backend/skills/."""
+    global _SKILLS_CACHE
+    if _SKILLS_CACHE is not None:
+        return _SKILLS_CACHE
+    skills_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skills")
+    loaded = []
+    if os.path.isdir(skills_dir):
+        for fname in sorted(os.listdir(skills_dir)):
+            if not fname.endswith(".md"):
+                continue
+            fpath = os.path.join(skills_dir, fname)
+            try:
+                with open(fpath, "r", encoding="utf-8") as f:
+                    raw = f.read().strip()
+                name = fname[:-3]
+                desc = ""
+                if raw.startswith("---"):
+                    parts = raw.split("---", 2)
+                    if len(parts) >= 3:
+                        for line in parts[1].splitlines():
+                            if line.startswith("name:"):
+                                name = line.split(":", 1)[1].strip()
+                            elif line.startswith("description:"):
+                                desc = line.split(":", 1)[1].strip()
+                loaded.append({
+                    "name": name,
+                    "filename": fname,
+                    "description": desc,
+                    "content": raw,
+                })
+            except Exception:
+                pass
+    _SKILLS_CACHE = loaded
+    return loaded
+
+
+def get_ict_killzone_info(ts):
+    """
+    Deterministic ICT Killzone Clock in New York Time (EST/EDT).
+    - London Open: 02:00 - 05:00 NY
+    - NY AM Open:  08:00 - 11:00 NY (Silver Bullet: 10:00 - 11:00 NY)
+    - London Close: 11:00 - 13:00 NY
+    - Asian Range: 20:00 - 00:00 NY
+    """
+    dt_ny = datetime.fromtimestamp(int(ts), tz=NY_TZ)
+    h = dt_ny.hour
+    ny_str = dt_ny.strftime("%H:%M %Z")
+    if 2 <= h < 5:
+        is_sb = (h == 3)
+        return {
+            "in_killzone": True,
+            "is_silver_bullet": is_sb,
+            "session_name": "London Open Silver Bullet" if is_sb else "London Open Killzone",
+            "liquidity_grade": "HIGH",
+            "ny_time": ny_str,
+        }
+    if 8 <= h < 11:
+        is_sb = (h == 10)
+        return {
+            "in_killzone": True,
+            "is_silver_bullet": is_sb,
+            "session_name": "NY AM Silver Bullet" if is_sb else "NY AM Open Killzone",
+            "liquidity_grade": "HIGH",
+            "ny_time": ny_str,
+        }
+    if 11 <= h < 13:
+        return {
+            "in_killzone": True,
+            "is_silver_bullet": False,
+            "session_name": "London Close Killzone",
+            "liquidity_grade": "MEDIUM",
+            "ny_time": ny_str,
+        }
+    if 20 <= h <= 23 or h == 0:
+        return {
+            "in_killzone": False,
+            "is_silver_bullet": False,
+            "session_name": "Asian Range (Liquidity Pool)",
+            "liquidity_grade": "LOW",
+            "ny_time": ny_str,
+        }
+    return {
+        "in_killzone": False,
+        "is_silver_bullet": False,
+        "session_name": "Off-Session",
+        "liquidity_grade": "LOW",
+        "ny_time": ny_str,
+    }
 
 
 def _ssl_context():
@@ -1247,6 +1341,14 @@ def _call_gemini_argon_api(api_key, prompt_payload):
                 "type": "string",
                 "description": "1-sentence risk assessment, R:R check, and key invalidation level",
             },
+            "bull_case": {
+                "type": "string",
+                "description": "1-sentence Bullish Technical Analyst argument in favor of the setup",
+            },
+            "bear_case": {
+                "type": "string",
+                "description": "1-sentence Bearish Macro & Risk Critic challenge against the setup",
+            },
             "executive_summary": {
                 "type": "string",
                 "description": "2-sentence institutional portfolio manager decision explaining the final signal",
@@ -1259,19 +1361,26 @@ def _call_gemini_argon_api(api_key, prompt_payload):
             "technical_agent_note",
             "macro_agent_note",
             "risk_officer_note",
+            "bull_case",
+            "bear_case",
             "executive_summary",
         ],
     }
 
+    skills_text = "\n\n".join(sk["content"] for sk in load_trading_skills())
+    sys_prompt = (
+        "You are the Chief Institutional Portfolio Manager & Risk Gatekeeper running a 3-Agent Debate "
+        "(Bullish Technical Analyst vs. Bearish Macro/Risk Critic vs. Chief Risk Officer Judge). "
+        "Review the candidate signal, ICT Killzone session status, Fibonacci Golden Pocket, Multi-Timeframe "
+        "TradingView recommendations, DXY correlation, and live wire headlines. Follow these loaded SKILL.md playbooks:\n\n"
+        f"{skills_text}\n\n"
+        "If a BUY/SELL candidate fights strong higher-timeframe structure, severe opposing macro catalysts, "
+        "or extreme RSI exhaustion, veto it to WAIT. Otherwise approve or refine it concisely."
+    )
+
     body = {
         "model": "gemini-4-argon",
-        "system_instruction": (
-            "You are the Chief Institutional Gold (XAU/USD) Portfolio Manager & Risk Gatekeeper specializing in "
-            "Swing Trading, Intraday, and Macro structure. Review the quantitative candidate signal, Fibonacci "
-            "Golden Pocket levels, Multi-Timeframe TradingView recommendations, DXY correlation, and live wire "
-            "headlines. If a BUY/SELL candidate fights strong higher-timeframe structure or severe opposing macro "
-            "catalysts, veto it to WAIT. Otherwise approve or refine it and explain your institutional reasoning concisely."
-        ),
+        "system_instruction": sys_prompt,
         "input": json.dumps(prompt_payload),
         "response_format": {
             "type": "text",
@@ -1514,7 +1623,27 @@ def run_ai_agent_layer(
                 f"near ${current_price:.2f} (Fib 50%: ${fib_500:.2f}). Watching for liquidity sweep at ${swing_low:.2f} / ${swing_high:.2f}."
             )
 
-    engine_label = "Built-in 3-Agent Quant + Macro Committee (Gemini 4 Argon Architecture)"
+    engine_label = "3-Agent Debate + SKILL.md Gate (TradingAgents Architecture)"
+    kz_info = get_ict_killzone_info(candle_ts)
+    skills_loaded = [
+        {"name": sk["name"], "filename": sk["filename"], "description": sk["description"]}
+        for sk in load_trading_skills()
+    ]
+
+    # Deterministic Bull vs. Bear Debate synthesis (upgraded by Gemini 4 Argon if key is configured)
+    bull_case = (
+        f"Bull Analyst: {tech_bias} structure ({htf_bull_count} bullish TF votes) with {fib_status}; "
+        f"candidate {raw_dir} ({raw_conf}%) targets TP1 ${tp1:.2f} (R:R 1:{raw_sig['risk_reward']})."
+    )
+    kz_risk_note = (
+        f"Active {kz_info['session_name']} ({kz_info['liquidity_grade']} liquidity, {kz_info['ny_time']})."
+        if kz_info["in_killzone"]
+        else f"Caution: {kz_info['session_name']} ({kz_info['ny_time']}) — lower institutional volume."
+    )
+    bear_case = (
+        f"Bear Critic: {kz_risk_note} Macro is {f_bias} ({f_score:+d}, DXY {dxy_chg:+.2f}%), "
+        f"RSI14 at {rsi14:.1f}, {htf_bear_count} bearish TF votes. {event_str}"
+    )
 
     # Optional Live Gemini 4 Argon API upgrade if user configured GEMINI_API_KEY
     api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or get_setting("gemini_api_key", "")
@@ -1525,6 +1654,7 @@ def run_ai_agent_layer(
                 "timeframe": interval,
                 "trading_style": trading_style,
                 "candle_ts": candle_ts,
+                "ict_killzone": kz_info,
                 "current_price": current_price,
                 "raw_direction": raw_dir,
                 "raw_signal": raw_sig["signal"],
@@ -1547,7 +1677,7 @@ def run_ai_agent_layer(
             }
             llm_res = _call_gemini_argon_api(api_key, prompt_payload)
             if llm_res:
-                engine_label = "Gemini 4 Argon Live API (gemini-4-argon Interactions API)"
+                engine_label = "Gemini 4 Argon + SKILL.md 3-Agent Debate"
                 verdict = llm_res.get("verdict", verdict)
                 if llm_res.get("final_direction") in ("BUY", "SELL", "WAIT"):
                     final_dir = llm_res["final_direction"]
@@ -1556,6 +1686,8 @@ def run_ai_agent_layer(
                 tech_agent_note = llm_res.get("technical_agent_note", tech_agent_note)
                 macro_agent_note = llm_res.get("macro_agent_note", macro_agent_note)
                 risk_officer_note = llm_res.get("risk_officer_note", risk_officer_note)
+                bull_case = llm_res.get("bull_case", bull_case)
+                bear_case = llm_res.get("bear_case", bear_case)
                 exec_summary = llm_res.get("executive_summary", exec_summary)
                 verdict_badge = f"GEMINI 4 ARGON: {verdict.replace('_', ' ')}"
         except Exception:
@@ -1573,24 +1705,31 @@ def run_ai_agent_layer(
         "adjusted_confidence": final_conf,
         "watch_zone": f"${golden_low:.2f} – ${golden_high:.2f} (Fib 38.2%–61.8%)",
         "executive_summary": exec_summary,
+        "killzone": kz_info,
+        "skills_loaded": skills_loaded,
+        "debate": {
+            "bull_case": bull_case,
+            "bear_case": bear_case,
+            "judge_verdict": risk_officer_note,
+        },
         "agents": [
             {
-                "name": "1. Swing & Structure AI Agent",
+                "name": "1. Bullish Technical & Structure Analyst",
                 "role": "EMA 21/50/200 · Fibonacci Golden Pocket · MTF Confluence",
                 "bias": tech_bias,
                 "score": tech_score,
-                "note": tech_agent_note,
+                "note": bull_case,
             },
             {
-                "name": "2. Macro & DXY Intelligence Agent",
-                "role": "TVC:DXY Inverse Correlation · Reuters/Dow Jones Gold Wire",
+                "name": "2. Bearish Macro & Killzone Critic",
+                "role": "ICT Killzones · TVC:DXY · Wire News & RSI Exhaustion",
                 "bias": f_bias,
                 "score": macro_score,
-                "note": macro_agent_note,
+                "note": bear_case,
             },
             {
-                "name": "3. Chief Risk Officer (Final Gate)",
-                "role": "Pre-Signal Approval / Veto · R:R & Single-Position Guard",
+                "name": "3. Chief Risk Officer (Judge)",
+                "role": "Debate Synthesis · $10 Risk Guard · Approve / Veto",
                 "bias": final_dir if final_dir in ("BUY", "SELL") else "HOLD FIRE",
                 "score": final_conf,
                 "note": risk_officer_note,
@@ -1987,6 +2126,7 @@ def run_and_store_backtest(
     end_date=None,
     exit_rule="TP1_ONLY",
     risk_usd=10.0,
+    killzone_only=False,
     sl_mult=None,
     tp1_mult=None,
     tp2_mult=None,
@@ -2112,6 +2252,12 @@ def run_and_store_backtest(
     max_hold = style_cfg["max_hold_bars"]
 
     while i < n - 3:
+        if killzone_only and actual_interval in ("1m", "5m", "15m", "1h"):
+            kz = get_ict_killzone_info(candles[i]["timestamp"])
+            if not kz["in_killzone"]:
+                i += 1
+                continue
+
         sig = compute_signal_at(
             i,
             candles,
