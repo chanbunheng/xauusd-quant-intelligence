@@ -32,7 +32,11 @@ from analyze_gold_5m import (
     TRADING_STYLES,
     analyze_timeframe,
     broadcast_telegram_signal,
+    evaluate_active_tv_signal,
     fetch_fundamental_analysis,
+    get_tv_monitor_payload,
+    manual_close_tv_signal,
+    process_tradingview_webhook,
     fetch_live_tv_tick,
     get_saved_trading_config,
     run_and_store_backtest,
@@ -73,6 +77,11 @@ def _telegram_background_worker():
     while True:
         try:
             sync_telegram_updates(run_commands=True)
+        except Exception:
+            pass
+
+        try:
+            evaluate_active_tv_signal()
         except Exception:
             pass
 
@@ -328,6 +337,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, status=500)
             return
 
+        if path == "/api/tv/signals":
+            try:
+                payload = get_tv_monitor_payload(limit=100)
+                self._send_json(payload)
+            except Exception as exc:
+                self._send_json({"error": str(exc)}, status=500)
+            return
+
         self.send_response(404)
         self.end_headers()
 
@@ -339,6 +356,31 @@ class DashboardHandler(BaseHTTPRequestHandler):
             body = json.loads(raw) if raw else {}
         except Exception:
             body = {}
+
+        if parsed.path == "/api/webhook/tradingview":
+            try:
+                qs = parse_qs(parsed.query)
+                expected_secret = (os.environ.get("TV_WEBHOOK_SECRET") or get_all_settings().get("tv_webhook_secret") or "").strip()
+                if expected_secret:
+                    provided = (qs.get("token", [""])[0] or (body.get("secret") if isinstance(body, dict) else "") or "").strip()
+                    if provided != expected_secret:
+                        self._send_json({"error": "Invalid webhook token"}, status=401)
+                        return
+                res = process_tradingview_webhook(raw)
+                self._send_json(res)
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, status=400)
+            except Exception as exc:
+                self._send_json({"error": str(exc), "trace": traceback.format_exc()}, status=500)
+            return
+
+        if parsed.path == "/api/tv/close":
+            try:
+                closed = manual_close_tv_signal()
+                self._send_json({"ok": True, "closed": closed})
+            except Exception as exc:
+                self._send_json({"error": str(exc)}, status=500)
+            return
 
         if parsed.path == "/api/backtest/run":
             try:

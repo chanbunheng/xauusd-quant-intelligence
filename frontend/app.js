@@ -1611,7 +1611,7 @@ function appendCopilotMessage(role, text) {
 // 11. DEDICATED SIDEBAR VIEW ROUTER & CONFIRMED ACTIONS
 // ============================================================================
 function switchWorkspaceView(viewKey) {
-  const validViews = ["overview", "terminal", "ai-gate", "copilot", "backtest", "telegram", "settings"];
+  const validViews = ["overview", "terminal", "ai-gate", "copilot", "backtest", "telegram", "tv-monitor", "settings"];
   if (!validViews.includes(viewKey)) viewKey = "overview";
   currentView = viewKey;
 
@@ -1622,6 +1622,7 @@ function switchWorkspaceView(viewKey) {
     copilot: "Copilot & Strategy Lab",
     backtest: "Backtest & Ledger",
     telegram: "Telegram Signal Hub",
+    "tv-monitor": "TradingView Monitor",
     settings: "Settings & Risk"
   };
 
@@ -1644,6 +1645,7 @@ function switchWorkspaceView(viewKey) {
   setTimeout(() => {
     if (viewKey === "terminal") drawCharts();
     if (viewKey === "backtest" && selectedRunDetail) drawEquityCurve(selectedRunDetail.equity_curve || []);
+    if (viewKey === "tv-monitor") fetchTvMonitor();
   }, 30);
 }
 
@@ -2404,6 +2406,173 @@ function initEventListeners() {
     if (currentView === "terminal") drawCharts();
     if (currentView === "backtest" && selectedRunDetail) drawEquityCurve(selectedRunDetail.equity_curve || []);
   });
+
+  if (el("tvRefreshBtn")) el("tvRefreshBtn").addEventListener("click", () => fetchTvMonitor());
+  if (el("tvCloseActiveBtn")) el("tvCloseActiveBtn").addEventListener("click", () => closeActiveTvTrade());
+  if (el("tvTestWebhookBtn")) el("tvTestWebhookBtn").addEventListener("click", () => sendTestTvWebhook());
+  if (el("tvCopyWebhookBtn")) {
+    el("tvCopyWebhookBtn").addEventListener("click", () => {
+      const url = `${API_BASE || window.location.origin}/api/webhook/tradingview`;
+      if (navigator.clipboard) navigator.clipboard.writeText(url);
+      showToast("Copied TradingView Webhook URL");
+    });
+  }
+}
+
+// ============================================================================
+// 11B. TRADINGVIEW WEBHOOK MONITOR (LOGIC 18.11 · TP1-ONLY)
+// ============================================================================
+async function fetchTvMonitor() {
+  const urlCode = el("tvWebhookUrlCode");
+  if (urlCode) urlCode.textContent = `${API_BASE || window.location.origin}/api/webhook/tradingview`;
+  try {
+    const res = await fetch(`${API_BASE}/api/tv/signals`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderTvMonitor(data);
+  } catch (e) {
+    // Silent background retry
+  }
+}
+
+function renderTvMonitor(data) {
+  const stats = data.stats || {};
+  const active = data.active_trade || null;
+  const trades = data.trades || [];
+
+  const navBadge = el("navTvStatusBadge");
+  if (navBadge) {
+    navBadge.textContent = active ? active.direction : "TV";
+    navBadge.className = active ? `nav-badge ${active.direction === "BUY" ? "live" : "warn"}` : "nav-badge live";
+  }
+
+  const statusBadge = el("tvMonitorStatusBadge");
+  if (statusBadge) {
+    statusBadge.textContent = active ? `OPEN · ${active.direction}` : "IDLE";
+    statusBadge.className = `pill ${active ? active.direction : "WAIT"}`;
+  }
+
+  const closeBtn = el("tvCloseActiveBtn");
+  if (closeBtn) closeBtn.style.display = active ? "inline-flex" : "none";
+
+  if (el("tvWinRateVal")) el("tvWinRateVal").textContent = `${Number(stats.win_rate || 0).toFixed(1)}%`;
+  if (el("tvWinLossSub")) el("tvWinLossSub").textContent = `${stats.wins || 0}W / ${stats.losses || 0}L (${stats.closed_trades || 0} closed)`;
+
+  const netUsd = Number(stats.net_pnl_usd || 0);
+  const netPts = Number(stats.net_pnl_pts || 0);
+  if (el("tvNetPnlVal")) {
+    el("tvNetPnlVal").textContent = `${netUsd >= 0 ? "+" : "-"}$${Math.abs(netUsd).toFixed(2)}`;
+    el("tvNetPnlVal").style.color = netUsd >= 0 ? "var(--green)" : "var(--red)";
+  }
+  if (el("tvNetPtsSub")) el("tvNetPtsSub").textContent = `${netPts >= 0 ? "+" : ""}${netPts.toFixed(2)} pts`;
+
+  if (el("tvProfitFactorVal")) el("tvProfitFactorVal").textContent = Number(stats.profit_factor || 0).toFixed(2);
+  if (el("tvTotalSignalsSub")) el("tvTotalSignalsSub").textContent = `${stats.total_signals || 0} total signals`;
+
+  if (el("tvLivePriceVal")) el("tvLivePriceVal").textContent = stats.live_price ? `$${Number(stats.live_price).toFixed(2)}` : "--";
+  if (el("tvUnrealizedSub")) {
+    if (active && stats.live_price) {
+      const uUsd = Number(stats.unrealized_pnl_usd || 0);
+      const uPts = Number(stats.unrealized_pnl_pts || 0);
+      el("tvUnrealizedSub").textContent = `Open P&L: ${uUsd >= 0 ? "+" : "-"}$${Math.abs(uUsd).toFixed(2)} (${uPts >= 0 ? "+" : ""}${uPts.toFixed(2)} pts)`;
+      el("tvUnrealizedSub").style.color = uUsd >= 0 ? "var(--green)" : "var(--red)";
+    } else {
+      el("tvUnrealizedSub").textContent = "No open position";
+      el("tvUnrealizedSub").style.color = "var(--text-2)";
+    }
+  }
+
+  const activeCard = el("tvActiveTradeCard");
+  if (activeCard) {
+    if (!active) {
+      activeCard.innerHTML = `<span style="color:var(--text-2);">No active TradingView position. Waiting for webhook alert on <code>/api/webhook/tradingview</code>.</span>`;
+    } else {
+      const uUsd = Number(stats.unrealized_pnl_usd || 0);
+      const dirColor = active.direction === "BUY" ? "var(--green)" : "var(--red)";
+      activeCard.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="pill ${active.direction}">${active.direction}</span>
+            <strong style="color:var(--text-0);font-size:14px;">${active.symbol} #${active.id}</strong>
+            <span style="color:var(--text-2);">${active.timeframe} · ${active.source}</span>
+          </div>
+          <div style="font-size:15px;font-weight:800;color:${uUsd >= 0 ? "var(--green)" : "var(--red)"};">
+            ${uUsd >= 0 ? "+" : "-"}$${Math.abs(uUsd).toFixed(2)}
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;font-size:11.5px;">
+          <div><span style="color:var(--text-2);">Entry:</span> <strong style="color:${dirColor};">$${Number(active.entry_price).toFixed(2)}</strong></div>
+          <div><span style="color:var(--text-2);">Zone:</span> <strong>${active.entry_zone || "--"}</strong></div>
+          <div><span style="color:var(--text-2);">Stop Loss:</span> <strong style="color:var(--red);">$${Number(active.sl_price).toFixed(2)}</strong></div>
+          <div><span style="color:var(--text-2);">Target TP1:</span> <strong style="color:var(--green);">$${Number(active.tp1_price).toFixed(2)}</strong></div>
+          <div><span style="color:var(--text-2);">Lot / Risk:</span> <strong>${Number(active.lot_size).toFixed(2)} ($${Number(active.risk_usd).toFixed(2)})</strong></div>
+          <div><span style="color:var(--text-2);">Opened:</span> <span>${active.recorded_at}</span></div>
+        </div>
+      `;
+    }
+  }
+
+  const tbody = el("tvTradesTableBody");
+  if (tbody) {
+    if (!trades.length) {
+      tbody.innerHTML = `<tr><td colspan="11" style="padding:14px;text-align:center;color:var(--text-2);">No TradingView signals recorded yet.</td></tr>`;
+    } else {
+      tbody.innerHTML = trades.map((t) => {
+        const pnl = t.pnl_usd != null ? Number(t.pnl_usd) : null;
+        const pnlHtml = pnl == null
+          ? `<span style="color:var(--text-2);">--</span>`
+          : `<strong style="color:${pnl >= 0 ? "var(--green)" : "var(--red)"};">${pnl >= 0 ? "+" : "-"}$${Math.abs(pnl).toFixed(2)}</strong>`;
+        const exitHtml = t.outcome_price != null ? `$${Number(t.outcome_price).toFixed(2)}` : "--";
+        return `
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:8px 10px;color:var(--text-2);">#${t.id}</td>
+            <td style="padding:8px 10px;white-space:nowrap;">${t.recorded_at}</td>
+            <td style="padding:8px 10px;"><strong>${t.symbol}</strong> <span style="color:var(--text-2);">(${t.timeframe})</span></td>
+            <td style="padding:8px 10px;"><span class="pill ${t.direction}">${t.direction}</span></td>
+            <td style="padding:8px 10px;">${Number(t.lot_size || 0.01).toFixed(2)}</td>
+            <td style="padding:8px 10px;">$${Number(t.entry_price).toFixed(2)}</td>
+            <td style="padding:8px 10px;color:var(--red);">$${Number(t.sl_price).toFixed(2)}</td>
+            <td style="padding:8px 10px;color:var(--green);">$${Number(t.tp1_price).toFixed(2)}</td>
+            <td style="padding:8px 10px;">${exitHtml}</td>
+            <td style="padding:8px 10px;"><span style="font-weight:700;">${t.status}</span></td>
+            <td style="padding:8px 10px;text-align:right;">${pnlHtml}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+  }
+}
+
+async function closeActiveTvTrade() {
+  try {
+    const res = await fetch(`${API_BASE}/api/tv/close`, { method: "POST" });
+    if (res.ok) {
+      showToast("Closed active TradingView trade");
+      fetchTvMonitor();
+    }
+  } catch (e) {
+    showToast("Failed to close TradingView trade");
+  }
+}
+
+async function sendTestTvWebhook() {
+  const sample = `🚨 LOGIC 18.11 BUY SIGNAL\n\n🟡 Pair: XAUUSD\n⏱ Timeframe: 1\n\n🟢 ENTRY ZONE\n4049.70 - 4045.20\n\n🎯 TAKE PROFIT\nTP1: 4053.30\nTP2: 4056.90\nTP3: 4060.50\nTP4: 4064.10\n\n🛑 STOP LOSS\n4040.70\n\n⚡ LOGIC 18.11 by ROTHEA`;
+  try {
+    const res = await fetch(`${API_BASE}/api/webhook/tradingview`, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: sample,
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast(`Webhook ${data.action}: #${data.trade?.id || ""}`);
+      fetchTvMonitor();
+    } else {
+      showToast(`Webhook error: ${data.error || res.status}`);
+    }
+  } catch (e) {
+    showToast("Failed to send test webhook");
+  }
 }
 
 // ============================================================================
@@ -2424,7 +2593,14 @@ document.addEventListener("DOMContentLoaded", () => {
   setInterval(updateClocksAndCountdown, 1000);
 
   fetchFullDashboard();
+  fetchTvMonitor();
   pollLiveTick();
   setInterval(pollLiveTick, 2000);
-  setInterval(fetchFullDashboard, 20000);
+  setInterval(() => {
+    if (currentView === "tv-monitor") fetchTvMonitor();
+  }, 5000);
+  setInterval(() => {
+    fetchFullDashboard();
+    fetchTvMonitor();
+  }, 20000);
 });

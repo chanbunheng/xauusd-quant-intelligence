@@ -211,6 +211,30 @@ def init_db():
                 message_preview TEXT NOT NULL,
                 ok INTEGER NOT NULL DEFAULT 1
             );
+
+            CREATE TABLE IF NOT EXISTS tv_signals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                recorded_at TEXT NOT NULL,
+                source TEXT NOT NULL DEFAULT 'LOGIC 18.11',
+                symbol TEXT NOT NULL,
+                timeframe TEXT NOT NULL,
+                direction TEXT NOT NULL,
+                entry_zone TEXT DEFAULT '',
+                entry_price REAL NOT NULL,
+                sl_price REAL NOT NULL,
+                tp1_price REAL NOT NULL,
+                tp2_price REAL,
+                tp3_price REAL,
+                tp4_price REAL,
+                lot_size REAL NOT NULL DEFAULT 0.01,
+                risk_usd REAL NOT NULL DEFAULT 10.0,
+                status TEXT NOT NULL DEFAULT 'ACTIVE',
+                outcome_price REAL,
+                outcome_time TEXT,
+                pnl_pts REAL,
+                pnl_usd REAL,
+                raw_message TEXT DEFAULT ''
+            );
             """
         )
         _ensure_column(conn, "backtest_runs", "trading_style", "TEXT NOT NULL DEFAULT 'SWING'")
@@ -1110,5 +1134,120 @@ def get_live_signals(limit=60):
         rows = conn.execute(
             "SELECT * FROM live_signals WHERE status != 'SUPERSEDED' ORDER BY id DESC LIMIT ?",
             (limit,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_active_tv_signal():
+    init_db()
+    if USE_SUPABASE:
+        try:
+            rows = _sb_request(
+                "GET",
+                "tv_signals",
+                params={"select": "*", "status": "eq.ACTIVE", "order": "id.desc", "limit": "1"},
+            )
+            if rows is not None:
+                return rows[0] if rows else None
+        except Exception:
+            pass
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM tv_signals WHERE status = 'ACTIVE' ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def insert_tv_signal(record):
+    init_db()
+    if USE_SUPABASE:
+        try:
+            rows = _sb_request("POST", "tv_signals", body=record)
+            if rows and len(rows) > 0:
+                return rows[0]
+        except Exception:
+            pass
+    with get_conn() as conn:
+        cur = conn.execute(
+            """
+            INSERT INTO tv_signals (
+                recorded_at, source, symbol, timeframe, direction,
+                entry_zone, entry_price, sl_price, tp1_price, tp2_price, tp3_price, tp4_price,
+                lot_size, risk_usd, status, raw_message
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?)
+            """,
+            (
+                record["recorded_at"],
+                record.get("source", "LOGIC 18.11"),
+                record["symbol"],
+                record["timeframe"],
+                record["direction"],
+                record.get("entry_zone", ""),
+                record["entry_price"],
+                record["sl_price"],
+                record["tp1_price"],
+                record.get("tp2_price"),
+                record.get("tp3_price"),
+                record.get("tp4_price"),
+                record.get("lot_size", 0.01),
+                record.get("risk_usd", 10.0),
+                record.get("raw_message", ""),
+            ),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM tv_signals WHERE id = ?", (cur.lastrowid,)).fetchone()
+        return dict(row)
+
+
+def close_tv_signal(sig_id, status, outcome_price, pnl_pts, pnl_usd):
+    init_db()
+    now_str = datetime.now(TZ_UTC7).strftime("%Y-%m-%d %H:%M:%S UTC+7")
+    if USE_SUPABASE:
+        try:
+            _sb_request(
+                "PATCH",
+                "tv_signals",
+                params={"id": f"eq.{sig_id}"},
+                body={
+                    "status": status,
+                    "outcome_price": outcome_price,
+                    "outcome_time": now_str,
+                    "pnl_pts": pnl_pts,
+                    "pnl_usd": pnl_usd,
+                },
+                prefer="return=minimal",
+            )
+        except Exception:
+            pass
+    with get_conn() as conn:
+        conn.execute(
+            """
+            UPDATE tv_signals
+            SET status = ?, outcome_price = ?, outcome_time = ?, pnl_pts = ?, pnl_usd = ?
+            WHERE id = ?
+            """,
+            (status, outcome_price, now_str, pnl_pts, pnl_usd, sig_id),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM tv_signals WHERE id = ?", (sig_id,)).fetchone()
+        return dict(row) if row else None
+
+
+def get_tv_signals(limit=100):
+    init_db()
+    if USE_SUPABASE:
+        try:
+            rows = _sb_request(
+                "GET",
+                "tv_signals",
+                params={"select": "*", "order": "id.desc", "limit": str(limit)},
+            )
+            if rows is not None:
+                return rows
+        except Exception:
+            pass
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM tv_signals ORDER BY id DESC LIMIT ?", (limit,)
         ).fetchall()
         return [dict(r) for r in rows]

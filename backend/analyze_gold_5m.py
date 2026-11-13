@@ -29,6 +29,8 @@ from zoneinfo import ZoneInfo
 
 from db import (
     DEFAULT_TELEGRAM_TOKEN,
+    close_tv_signal,
+    get_active_tv_signal,
     get_all_settings,
     get_backtest_run_details,
     get_backtest_runs,
@@ -36,7 +38,9 @@ from db import (
     get_setting,
     get_telegram_logs,
     get_telegram_subscribers,
+    get_tv_signals,
     init_db,
+    insert_tv_signal,
     log_telegram_message,
     record_and_evaluate_live_signal,
     save_backtest_run,
@@ -2885,6 +2889,383 @@ def analyze_timeframe(
         result["backtest"] = latest_bt
 
     return result
+
+
+# ==============================================================================
+# TRADINGVIEW WEBHOOK MONITOR (LOGIC 18.11 & GENERIC ALERTS, TP1-ONLY)
+# ==============================================================================
+
+def _normalize_tv_timeframe(raw_tf):
+    tf = str(raw_tf or "1").strip().lower()
+    mapping = {
+        "1": "1m", "1m": "1m",
+        "3": "3m", "3m": "3m",
+        "5": "5m", "5m": "5m",
+        "15": "15m", "15m": "15m",
+        "30": "30m", "30m": "30m",
+        "60": "1h", "1h": "1h",
+        "240": "4h", "4h": "4h",
+        "d": "1d", "1d": "1d",
+    }
+    return mapping.get(tf, tf if tf.endswith(("m", "h", "d")) else f"{tf}m")
+
+
+def _tv_feed_symbol(pair):
+    p = str(pair or "XAUUSD").upper().strip()
+    if ":" in p:
+        return p
+    if "XAU" in p:
+        return "OANDA:XAUUSD"
+    return f"OANDA:{p}"
+
+
+def parse_tradingview_alert(raw_text):
+    """Parses LOGIC 18.11 plain-text TradingView alerts or JSON webhook payloads."""
+    text = (raw_text or "").strip()
+    if not text:
+        raise ValueError("Empty webhook payload")
+
+    # JSON fallback
+    if text.startswith("{"):
+        try:
+            data = json.loads(text)
+            if isinstance(data, dict) and data.get("raw_message"):
+                text = str(data["raw_message"])
+            elif isinstance(data, dict) and (data.get("direction") or data.get("action")):
+                direction = str(data.get("direction") or data.get("action")).upper()
+                if direction not in ("BUY", "SELL"):
+                    raise ValueError(f"Unsupported direction: {direction}")
+                symbol = str(data.get("symbol") or data.get("pair") or "XAUUSD").upper().replace("OANDA:", "")
+                tf = _normalize_tv_timeframe(data.get("timeframe") or data.get("interval") or "1")
+                entry = float(data["entry_price"])
+                sl = float(data["sl_price"])
+                tp1 = float(data["tp1_price"])
+                return {
+                    "source": str(data.get("source") or "TRADINGVIEW"),
+                    "symbol": symbol,
+                    "timeframe": tf,
+                    "direction": direction,
+                    "entry_zone": str(data.get("entry_zone") or f"{entry:.2f}"),
+                    "entry_price": round(entry, 2),
+                    "sl_price": round(sl, 2),
+                    "tp1_price": round(tp1, 2),
+                    "tp2_price": float(data["tp2_price"]) if data.get("tp2_price") else None,
+                    "tp3_price": float(data["tp3_price"]) if data.get("tp3_price") else None,
+                    "tp4_price": float(data["tp4_price"]) if data.get("tp4_price") else None,
+                    "raw_message": text,
+                }
+        except ValueError:
+            raise
+        except Exception:
+            pass
+
+    upper = text.upper()
+    if "SELL" in upper:
+        direction = "SELL"
+    elif "BUY" in upper:
+        direction = "BUY"
+    else:
+        raise ValueError("Could not detect BUY or SELL direction in alert message")
+
+    m_pair = re.search(r"Pair\s*:\s*([A-Z0-9:_/\-]+)", text, re.IGNORECASE)
+    symbol = (m_pair.group(1) if m_pair else "XAUUSD").upper().replace("OANDA:", "").replace("/", "")
+
+    m_tf = re.search(r"Timeframe\s*:\s*([A-Za-z0-9]+)", text, re.IGNORECASE)
+    timeframe = _normalize_tv_timeframe(m_tf.group(1) if m_tf else "1")
+
+    m_src = re.search(r"(LOGIC\s*[0-9]+(?:\.[0-9]+)?)", text, re.IGNORECASE)
+    source = m_src.group(1).upper() if m_src else "TRADINGVIEW"
+
+    # Entry zone: "4049.70 - 4045.20" or single price
+    m_zone = re.search(
+        r"ENTRY(?:\s+ZONE)?\s*[:\n\r]+\s*([0-9]+(?:\.[0-9]+)?)\s*[-–—]\s*([0-9]+(?:\.[0-9]+)?)",
+        text,
+        re.IGNORECASE,
+    )
+    if m_zone:
+        e1 = float(m_zone.group(1))
+        e2 = float(m_zone.group(2))
+        entry_zone = f"{e1:.2f} - {e2:.2f}"
+        entry_price = round((e1 + e2) / 2.0, 2)
+    else:
+        m_entry = re.search(r"ENTRY(?:\s+ZONE)?\s*[:\n\r]+\s*([0-9]+(?:\.[0-9]+)?)", text, re.IGNORECASE)
+        if not m_entry:
+            raise ValueError("Missing ENTRY ZONE / price in alert message")
+        entry_price = round(float(m_entry.group(1)), 2)
+        entry_zone = f"{entry_price:.2f}"
+
+    def _find_num(pattern):
+        m = re.search(pattern, text, re.IGNORECASE)
+        return round(float(m.group(1)), 2) if m else None
+
+    tp1 = _find_num(r"TP1\s*:\s*([0-9]+(?:\.[0-9]+)?)")
+    tp2 = _find_num(r"TP2\s*:\s*([0-9]+(?:\.[0-9]+)?)")
+    tp3 = _find_num(r"TP3\s*:\s*([0-9]+(?:\.[0-9]+)?)")
+    tp4 = _find_num(r"TP4\s*:\s*([0-9]+(?:\.[0-9]+)?)")
+    sl = _find_num(r"STOP\s*LOSS\s*[:\n\r]+\s*([0-9]+(?:\.[0-9]+)?)") or _find_num(r"SL\s*:\s*([0-9]+(?:\.[0-9]+)?)")
+
+    if tp1 is None or sl is None:
+        raise ValueError("Missing TP1 or STOP LOSS in alert message")
+
+    return {
+        "source": source,
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "direction": direction,
+        "entry_zone": entry_zone,
+        "entry_price": entry_price,
+        "sl_price": sl,
+        "tp1_price": tp1,
+        "tp2_price": tp2,
+        "tp3_price": tp3,
+        "tp4_price": tp4,
+        "raw_message": text,
+    }
+
+
+def _broadcast_tv_telegram_open(trade):
+    if str(get_setting("telegram_auto_notify", "1")) != "1":
+        return
+    subs = get_telegram_subscribers(active_only=True)
+    if not subs:
+        return
+    emoji = "🟢" if trade["direction"] == "BUY" else "🔴"
+    zone_txt = f" ({trade['entry_zone']})" if trade.get("entry_zone") and "-" in trade["entry_zone"] else ""
+    msg = (
+        f"📡 <b>{trade['symbol']} · {trade['direction']} [TV]</b> ({trade['timeframe']} · {trade['source']})\n"
+        f"Lot: {trade['lot_size']:.2f} | Risk: ${trade['risk_usd']:.2f} | Target: TP1\n\n"
+        f"{emoji} Entry: <code>${trade['entry_price']:,.2f}</code>{zone_txt}\n"
+        f"🛑 SL:    <code>${trade['sl_price']:,.2f}</code>\n"
+        f"🎯 TP1:   <code>${trade['tp1_price']:,.2f}</code>\n\n"
+        f"🕒 <i>{trade['recorded_at']}</i>"
+    )
+    for s in subs:
+        send_telegram_message(s["chat_id"], msg, event_type="TV_OPEN")
+
+
+def _broadcast_tv_telegram_close(trade):
+    if str(get_setting("telegram_auto_notify", "1")) != "1":
+        return
+    subs = get_telegram_subscribers(active_only=True)
+    if not subs:
+        return
+    pnl_usd = float(trade.get("pnl_usd") or 0.0)
+    pnl_pts = float(trade.get("pnl_pts") or 0.0)
+    emoji = "✅" if pnl_usd >= 0 else "🛑"
+    msg = (
+        f"{emoji} <b>{trade['symbol']} #{trade['id']} CLOSED · {trade['status']} [TV]</b>\n"
+        f"{trade['direction']} ({trade['timeframe']} · {trade['source']})\n"
+        f"<code>${trade['entry_price']:,.2f}</code> → <code>${(trade.get('outcome_price') or 0):,.2f}</code>\n"
+        f"P&L: <b>{'+' if pnl_usd >= 0 else ''}${pnl_usd:.2f}</b> ({'+' if pnl_pts >= 0 else ''}{pnl_pts:.2f} pts)"
+    )
+    for s in subs:
+        send_telegram_message(s["chat_id"], msg, event_type=f"TV_{trade['status']}")
+
+
+def _compute_tv_pnl(symbol, entry, sl, exit_price, direction, lot_size):
+    feed_sym = _tv_feed_symbol(symbol)
+    contract = ASSET_CONTRACT_SIZE.get(feed_sym, 100.0)
+    pnl_pts = (exit_price - entry) if direction == "BUY" else (entry - exit_price)
+    pnl_pts = round(pnl_pts, 2)
+    pnl_usd = round(pnl_pts * float(lot_size) * contract, 2)
+    return pnl_pts, pnl_usd
+
+
+def process_tradingview_webhook(raw_text):
+    """
+    Processes an incoming TradingView webhook:
+    1. Parses the alert (e.g., LOGIC 18.11 format).
+    2. If an ACTIVE TV trade exists in the opposite direction, closes it first (REVERSAL_CLOSE).
+    3. Opens the new trade targeting TP1 only, sized by user's risk_usd (min 0.01 lot).
+    4. Immediately broadcasts to Telegram.
+    """
+    parsed = parse_tradingview_alert(raw_text)
+    feed_sym = _tv_feed_symbol(parsed["symbol"])
+    cfg = get_saved_trading_config()
+    risk_usd = float(cfg.get("risk_usd", 10.0) or 10.0)
+
+    live_price = None
+    try:
+        tick = fetch_live_tv_tick(feed_sym)
+        if tick and tick.get("price"):
+            live_price = float(tick["price"])
+    except Exception:
+        live_price = None
+
+    active = get_active_tv_signal()
+    closed_previous = None
+    if active:
+        if active["direction"] == parsed["direction"]:
+            return {
+                "ok": True,
+                "action": "DUPLICATE_IGNORED",
+                "message": f"Active {active['direction']} trade #{active['id']} already open",
+                "trade": active,
+            }
+        exit_px = round(live_price if live_price else parsed["entry_price"], 2)
+        pnl_pts, pnl_usd = _compute_tv_pnl(
+            active["symbol"], active["entry_price"], active["sl_price"], exit_px, active["direction"], active["lot_size"]
+        )
+        closed_previous = close_tv_signal(active["id"], "REVERSAL_CLOSE", exit_px, pnl_pts, pnl_usd)
+        if closed_previous:
+            _broadcast_tv_telegram_close(closed_previous)
+
+    lot_size, _, _ = calculate_lot_and_usd_pnl(
+        feed_sym,
+        parsed["entry_price"],
+        parsed["sl_price"],
+        parsed["tp1_price"],
+        parsed["direction"],
+        risk_usd=risk_usd,
+        dec=2,
+    )
+
+    now_str = datetime.now(TZ_UTC7).strftime("%Y-%m-%d %H:%M:%S UTC+7")
+    record = {
+        "recorded_at": now_str,
+        "source": parsed["source"],
+        "symbol": parsed["symbol"],
+        "timeframe": parsed["timeframe"],
+        "direction": parsed["direction"],
+        "entry_zone": parsed["entry_zone"],
+        "entry_price": parsed["entry_price"],
+        "sl_price": parsed["sl_price"],
+        "tp1_price": parsed["tp1_price"],
+        "tp2_price": parsed.get("tp2_price"),
+        "tp3_price": parsed.get("tp3_price"),
+        "tp4_price": parsed.get("tp4_price"),
+        "lot_size": lot_size,
+        "risk_usd": risk_usd,
+        "status": "ACTIVE",
+        "raw_message": parsed["raw_message"],
+    }
+    new_trade = insert_tv_signal(record)
+    _broadcast_tv_telegram_open(new_trade)
+    return {
+        "ok": True,
+        "action": "OPENED",
+        "closed_previous": closed_previous,
+        "trade": new_trade,
+    }
+
+
+def evaluate_active_tv_signal(live_price=None):
+    """Checks the active TradingView trade against live price for TP1_WIN or SL_LOSS (TP1-only exit)."""
+    active = get_active_tv_signal()
+    if not active:
+        return None, live_price
+
+    if live_price is None:
+        try:
+            tick = fetch_live_tv_tick(_tv_feed_symbol(active["symbol"]))
+            if tick and tick.get("price"):
+                live_price = float(tick["price"])
+        except Exception:
+            live_price = None
+
+    if live_price is None:
+        return active, None
+
+    d = active["direction"]
+    tp1 = float(active["tp1_price"])
+    sl = float(active["sl_price"])
+    hit_status = None
+    exit_px = None
+
+    if d == "BUY":
+        if live_price >= tp1:
+            hit_status, exit_px = "TP1_WIN", tp1
+        elif live_price <= sl:
+            hit_status, exit_px = "SL_LOSS", sl
+    else:
+        if live_price <= tp1:
+            hit_status, exit_px = "TP1_WIN", tp1
+        elif live_price >= sl:
+            hit_status, exit_px = "SL_LOSS", sl
+
+    if hit_status:
+        pnl_pts, pnl_usd = _compute_tv_pnl(
+            active["symbol"], active["entry_price"], active["sl_price"], exit_px, d, active["lot_size"]
+        )
+        closed = close_tv_signal(active["id"], hit_status, exit_px, pnl_pts, pnl_usd)
+        if closed:
+            _broadcast_tv_telegram_close(closed)
+        return None, live_price
+
+    return active, live_price
+
+
+def manual_close_tv_signal():
+    active = get_active_tv_signal()
+    if not active:
+        return None
+    live_price = active["entry_price"]
+    try:
+        tick = fetch_live_tv_tick(_tv_feed_symbol(active["symbol"]))
+        if tick and tick.get("price"):
+            live_price = round(float(tick["price"]), 2)
+    except Exception:
+        pass
+    pnl_pts, pnl_usd = _compute_tv_pnl(
+        active["symbol"], active["entry_price"], active["sl_price"], live_price, active["direction"], active["lot_size"]
+    )
+    closed = close_tv_signal(active["id"], "MANUAL_CLOSE", live_price, pnl_pts, pnl_usd)
+    if closed:
+        _broadcast_tv_telegram_close(closed)
+    return closed
+
+
+def get_tv_monitor_payload(limit=100):
+    active_trade, live_price = evaluate_active_tv_signal()
+    if live_price is None:
+        try:
+            tick = fetch_live_tv_tick("OANDA:XAUUSD")
+            if tick and tick.get("price"):
+                live_price = float(tick["price"])
+        except Exception:
+            live_price = None
+
+    trades = get_tv_signals(limit=limit)
+    closed = [t for t in trades if t.get("status") != "ACTIVE"]
+    wins = [t for t in closed if float(t.get("pnl_usd") or 0) > 0]
+    losses = [t for t in closed if float(t.get("pnl_usd") or 0) < 0]
+    total_closed = len(closed)
+    win_rate = round((len(wins) / total_closed) * 100.0, 1) if total_closed > 0 else 0.0
+    net_pnl_usd = round(sum(float(t.get("pnl_usd") or 0) for t in closed), 2)
+    net_pnl_pts = round(sum(float(t.get("pnl_pts") or 0) for t in closed), 2)
+    gross_win = sum(float(t.get("pnl_usd") or 0) for t in wins)
+    gross_loss = abs(sum(float(t.get("pnl_usd") or 0) for t in losses))
+    profit_factor = round(gross_win / gross_loss, 2) if gross_loss > 0 else (round(gross_win, 2) if gross_win > 0 else 0.0)
+
+    unrealized_pts = 0.0
+    unrealized_usd = 0.0
+    if active_trade and live_price is not None:
+        unrealized_pts, unrealized_usd = _compute_tv_pnl(
+            active_trade["symbol"],
+            active_trade["entry_price"],
+            active_trade["sl_price"],
+            live_price,
+            active_trade["direction"],
+            active_trade["lot_size"],
+        )
+
+    return {
+        "stats": {
+            "total_signals": len(trades),
+            "closed_trades": total_closed,
+            "wins": len(wins),
+            "losses": len(losses),
+            "win_rate": win_rate,
+            "net_pnl_usd": net_pnl_usd,
+            "net_pnl_pts": net_pnl_pts,
+            "profit_factor": profit_factor,
+            "live_price": live_price,
+            "unrealized_pnl_pts": unrealized_pts,
+            "unrealized_pnl_usd": unrealized_usd,
+        },
+        "active_trade": active_trade,
+        "trades": trades,
+    }
 
 
 if __name__ == "__main__":

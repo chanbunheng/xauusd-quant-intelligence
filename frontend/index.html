@@ -81,6 +81,13 @@
             </span>
             <span class="nav-badge live" id="navTgCountBadge">24/7</span>
           </button>
+          <button class="nav-item" data-nav="tv-monitor">
+            <span class="nav-item-left">
+              <span class="nav-icon">📡</span>
+              <span class="nav-item-label">TradingView Monitor</span>
+            </span>
+            <span class="nav-badge live" id="navTvStatusBadge">TV</span>
+          </button>
         </div>
 
         <div class="nav-section">
@@ -860,6 +867,91 @@
                   Recent Deliveries
                 </div>
                 <div id="tgLogsList" style="height:220px;overflow-y:auto;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================
+             VIEW 6B: TRADINGVIEW WEBHOOK MONITOR (LOGIC 18.11 · TP1 ONLY)
+             ================================================================ -->
+        <div class="workspace-view hidden-view" id="view-tv-monitor" data-view="tv-monitor">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📡 TradingView Webhook Monitor (LOGIC 18.11 · TP1-Only)</div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <span id="tvMonitorStatusBadge" class="pill WAIT">IDLE</span>
+                <button class="btn" id="tvRefreshBtn">Refresh</button>
+                <button class="btn" id="tvTestWebhookBtn">Test Alert</button>
+                <button class="btn primary" id="tvCloseActiveBtn" style="display:none;">Close Active Trade</button>
+              </div>
+            </div>
+
+            <!-- Webhook URL Copy Bar -->
+            <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+              <div style="display:flex;flex-direction:column;gap:2px;min-width:240px;flex:1;">
+                <span style="font-size:10px;font-weight:700;color:var(--gold-bright);text-transform:uppercase;">TradingView Webhook URL (Paste into TV Alert)</span>
+                <code id="tvWebhookUrlCode" style="font-size:11.5px;color:var(--text-0);word-break:break-all;">--</code>
+              </div>
+              <button class="btn" id="tvCopyWebhookBtn">Copy URL</button>
+            </div>
+
+            <!-- KPI Strip -->
+            <div class="kpi-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px;">
+              <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:10px;">
+                <div style="font-size:10px;color:var(--text-2);text-transform:uppercase;">Win Rate</div>
+                <div id="tvWinRateVal" style="font-size:20px;font-weight:800;color:var(--text-0);">0.0%</div>
+                <div id="tvWinLossSub" style="font-size:10.5px;color:var(--text-2);">0W / 0L (0 closed)</div>
+              </div>
+              <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:10px;">
+                <div style="font-size:10px;color:var(--text-2);text-transform:uppercase;">Net P&amp;L ($)</div>
+                <div id="tvNetPnlVal" style="font-size:20px;font-weight:800;color:var(--text-0);">$0.00</div>
+                <div id="tvNetPtsSub" style="font-size:10.5px;color:var(--text-2);">0.00 pts</div>
+              </div>
+              <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:10px;">
+                <div style="font-size:10px;color:var(--text-2);text-transform:uppercase;">Profit Factor</div>
+                <div id="tvProfitFactorVal" style="font-size:20px;font-weight:800;color:var(--text-0);">0.00</div>
+                <div id="tvTotalSignalsSub" style="font-size:10.5px;color:var(--text-2);">0 total signals</div>
+              </div>
+              <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:10px;">
+                <div style="font-size:10px;color:var(--text-2);text-transform:uppercase;">Live Price (XAUUSD)</div>
+                <div id="tvLivePriceVal" style="font-size:20px;font-weight:800;color:var(--gold-bright);">--</div>
+                <div id="tvUnrealizedSub" style="font-size:10.5px;color:var(--text-2);">No open position</div>
+              </div>
+            </div>
+
+            <!-- Active Position Panel -->
+            <div style="margin-bottom:14px;">
+              <div style="font-size:10px;font-weight:700;color:var(--gold-bright);text-transform:uppercase;margin-bottom:6px;">Active Open Trade</div>
+              <div id="tvActiveTradeCard" style="background:var(--bg-2);border:1px solid var(--border);border-radius:9px;padding:12px;font-size:12px;color:var(--text-2);">
+                Waiting for TradingView webhook signal...
+              </div>
+            </div>
+
+            <!-- Signal & Trade History Table -->
+            <div>
+              <div style="font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;margin-bottom:6px;">TradingView Signal &amp; Trade Ledger</div>
+              <div style="overflow-x:auto;border:1px solid var(--border);border-radius:9px;background:var(--bg-2);">
+                <table style="width:100%;border-collapse:collapse;font-size:11.5px;">
+                  <thead>
+                    <tr style="border-bottom:1px solid var(--border);color:var(--text-2);text-align:left;">
+                      <th style="padding:8px 10px;">#</th>
+                      <th style="padding:8px 10px;">Time</th>
+                      <th style="padding:8px 10px;">Pair / TF</th>
+                      <th style="padding:8px 10px;">Dir</th>
+                      <th style="padding:8px 10px;">Lot</th>
+                      <th style="padding:8px 10px;">Entry</th>
+                      <th style="padding:8px 10px;">SL</th>
+                      <th style="padding:8px 10px;">TP1</th>
+                      <th style="padding:8px 10px;">Exit</th>
+                      <th style="padding:8px 10px;">Status</th>
+                      <th style="padding:8px 10px;text-align:right;">P&amp;L ($)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tvTradesTableBody">
+                    <tr><td colspan="11" style="padding:14px;text-align:center;color:var(--text-2);">No TradingView signals recorded yet.</td></tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
