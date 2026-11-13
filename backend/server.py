@@ -287,8 +287,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 settings = get_all_settings()
                 status["has_gemini_key"] = bool(settings.get("gemini_api_key", "").strip())
                 status["has_claude_key"] = bool(settings.get("claude_api_key", "").strip())
-                status["claude_base_url"] = settings.get("claude_base_url", "https://api.laalaa.me")
-                status["claude_model"] = settings.get("claude_model", "claude-sonnet-5-5")
+                status["claude_base_url"] = settings.get("claude_base_url", "https://api.anthropic.com")
+                status["claude_model"] = settings.get("claude_model", "claude-sonnet-4-5")
                 status["saved_settings"] = saved_cfg
                 self._send_json(status)
             except Exception as exc:
@@ -507,8 +507,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 settings = get_all_settings()
                 status["has_gemini_key"] = bool(settings.get("gemini_api_key", "").strip())
                 status["has_claude_key"] = bool(settings.get("claude_api_key", "").strip())
-                status["claude_base_url"] = settings.get("claude_base_url", "https://api.laalaa.me")
-                status["claude_model"] = settings.get("claude_model", "claude-sonnet-5-5")
+                status["claude_base_url"] = settings.get("claude_base_url", "https://api.anthropic.com")
+                status["claude_model"] = settings.get("claude_model", "claude-sonnet-4-5")
                 saved_cfg = get_saved_trading_config()
                 self._send_json({"ok": True, "telegram": status, "saved_settings": saved_cfg})
             except Exception as exc:

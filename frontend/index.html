@@ -963,24 +963,21 @@
           <div class="equal-grid">
             <div class="card">
               <div class="card-header">
-                <div class="card-title">🔑 Cloud AI Key (Claude API)</div>
-                <span id="claudeKeyStatusBadge" class="mode-safety-pill paper-sim">CONFIGURED</span>
+                <div class="card-title">🔑 Cloud AI Key (Anthropic / Codex — Optional)</div>
+                <span id="claudeKeyStatusBadge" class="mode-safety-pill paper-sim">OPTIONAL</span>
               </div>
               <div style="display:flex;flex-direction:column;gap:8px;">
                 <div style="display:flex;gap:8px;align-items:center;">
-                  <input type="text" id="claudeBaseUrlInput" value="https://api.laalaa.me" placeholder="Base URL (https://api.laalaa.me)" style="flex:1.2;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:7px 10px;border-radius:7px;font-size:11.5px;font-family:var(--font-mono);" />
+                  <input type="text" id="claudeBaseUrlInput" value="https://api.anthropic.com" placeholder="Base URL (https://api.anthropic.com or https://api.openai.com)" style="flex:1.2;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:7px 10px;border-radius:7px;font-size:11.5px;font-family:var(--font-mono);" />
                   <select id="claudeModelSelect" class="ctrl-select" style="flex:0.8;">
-                    <option value="claude-sonnet-5-5" selected>claude-sonnet-5-5</option>
-                    <option value="claude-opus-5-5">claude-opus-5-5</option>
-                    <option value="claude-opus-5">claude-opus-5</option>
-                    <option value="claude-opus-4-8">claude-opus-4-8</option>
-                    <option value="claude-opus-4-7">claude-opus-4-7</option>
-                    <option value="claude-opus-4-6">claude-opus-4-6</option>
+                    <option value="claude-sonnet-4-5" selected>claude-sonnet-4-5</option>
+                    <option value="claude-opus-4-1">claude-opus-4-1</option>
+                    <option value="gpt-5">gpt-5 (OpenAI/Codex)</option>
                   </select>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
-                  <input type="password" id="claudeKeyInput" placeholder="Enter Claude API Key (sk-...)" style="flex:1;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:7px 10px;border-radius:7px;font-size:11.5px;font-family:var(--font-mono);" />
-                  <button class="btn primary" id="saveClaudeKeyBtn">Save Claude API</button>
+                  <input type="password" id="claudeKeyInput" placeholder="Leave blank for built-in 3-Agent Debate, or enter API key..." style="flex:1;background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);padding:7px 10px;border-radius:7px;font-size:11.5px;font-family:var(--font-mono);" />
+                  <button class="btn primary" id="saveClaudeKeyBtn">Save Key</button>
                 </div>
               </div>
             </div>

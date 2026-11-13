@@ -2075,29 +2075,28 @@ function initEventListeners() {
     });
   }
 
-  // Save Claude API Key, Base URL & Model (with Confirmation Dialog)
+  // Save Cloud AI Key, Base URL & Model (with Confirmation Dialog)
   if (el("saveClaudeKeyBtn")) {
     el("saveClaudeKeyBtn").addEventListener("click", () => {
       const k = el("claudeKeyInput")?.value.trim() || "";
-      const baseUrl = el("claudeBaseUrlInput")?.value.trim() || "https://api.laalaa.me";
-      const model = el("claudeModelSelect")?.value || "claude-sonnet-5-5";
+      const baseUrl = el("claudeBaseUrlInput")?.value.trim() || "https://api.anthropic.com";
+      const model = el("claudeModelSelect")?.value || "claude-sonnet-4-5";
       openConfirmDialog({
-        title: "Update Cloud AI (Claude API)",
-        badge: "CLAUDE API",
+        title: "Update Cloud AI Key",
+        badge: "CLOUD AI",
         desc: k
-          ? "Save your Claude API key, Base URL, and model for 3-Agent Debate inference?"
-          : "Update Claude Base URL & Model (or clear API key if left blank)?",
-        meta: `Base URL: ${baseUrl}\nModel: ${model}${k ? `\nKey prefix: ${k.slice(0, 7)}...` : ""}`,
-        confirmLabel: "Save Claude API ↵",
+          ? "Save your Anthropic / Codex API key for cloud LLM inference?"
+          : "Clear saved API key and use the built-in 3-Agent Debate Committee?",
+        meta: k ? `Base URL: ${baseUrl}\nModel: ${model}\nKey prefix: ${k.slice(0, 7)}...` : "Mode: Built-in 3-Agent Debate + SKILL.md",
+        confirmLabel: "Save ↵",
         onConfirm: async () => {
-          const payload = { claude_base_url: baseUrl, claude_model: model };
-          if (k) payload.claude_api_key = k;
+          const payload = { claude_api_key: k, claude_base_url: baseUrl, claude_model: model };
           await fetch(`${API_BASE}/api/settings`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
           });
-          showToast(`Saved Claude API (${model})`);
+          showToast(k ? `Saved Cloud AI (${model})` : "Switched to Built-in 3-Agent Debate");
           fetchFullDashboard();
         }
       });

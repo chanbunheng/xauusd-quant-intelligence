@@ -227,8 +227,8 @@ def init_db():
             "ai_agent_mode": "CLAUDE_DEBATE",
             "gemini_api_key": os.environ.get("GEMINI_API_KEY", ""),
             "claude_api_key": os.environ.get("CLAUDE_API_KEY", ""),
-            "claude_base_url": os.environ.get("CLAUDE_BASE_URL", "https://api.laalaa.me"),
-            "claude_model": os.environ.get("CLAUDE_MODEL", "claude-sonnet-5-5"),
+            "claude_base_url": os.environ.get("CLAUDE_BASE_URL", "https://api.anthropic.com"),
+            "claude_model": os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5"),
             "telegram_last_update_id": "0",
         }
         for k, v in defaults.items():

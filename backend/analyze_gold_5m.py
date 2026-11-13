@@ -1326,15 +1326,15 @@ def _extract_json_object(raw_text):
 
 def _call_claude_api(api_key, base_url, model, prompt_payload):
     """
-    Calls Claude API (supports custom Base URL such as https://api.laalaa.me)
-    using Anthropic /v1/messages first, with OpenAI-compatible /v1/chat/completions fallback.
+    Calls Claude / OpenAI-compatible Cloud AI API (optional; skipped if no API key is saved).
+    Supports official Anthropic (https://api.anthropic.com) or OpenAI/Codex endpoints.
     """
     cache_key = f"claude_{model}_{prompt_payload['symbol']}_{prompt_payload['timeframe']}_{prompt_payload['trading_style']}_{prompt_payload['candle_ts']}_{prompt_payload['raw_direction']}"
     if cache_key in _GEMINI_AGENT_CACHE:
         return _GEMINI_AGENT_CACHE[cache_key]
 
-    base = (base_url or "https://api.laalaa.me").strip().rstrip("/")
-    model_id = (model or "claude-sonnet-5-5").strip()
+    base = (base_url or "https://api.anthropic.com").strip().rstrip("/")
+    model_id = (model or "claude-sonnet-4-5").strip()
     skills_text = "\n\n".join(sk["content"] for sk in load_trading_skills())
     sys_prompt = (
         "You are the Chief Institutional Portfolio Manager & Risk Gatekeeper running a 3-Agent Debate "
@@ -1759,8 +1759,8 @@ def run_ai_agent_layer(
 
     # Optional Live Cloud AI Upgrade: Claude API (primary) -> Gemini 4 Argon (fallback)
     claude_key = os.environ.get("CLAUDE_API_KEY") or get_setting("claude_api_key", "")
-    claude_base = os.environ.get("CLAUDE_BASE_URL") or get_setting("claude_base_url", "https://api.laalaa.me")
-    claude_model = os.environ.get("CLAUDE_MODEL") or get_setting("claude_model", "claude-sonnet-5-5")
+    claude_base = os.environ.get("CLAUDE_BASE_URL") or get_setting("claude_base_url", "https://api.anthropic.com")
+    claude_model = os.environ.get("CLAUDE_MODEL") or get_setting("claude_model", "claude-sonnet-4-5")
     gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or get_setting("gemini_api_key", "")
 
     if (claude_key and len(claude_key.strip()) > 10) or (gemini_key and len(gemini_key.strip()) > 15):
@@ -2205,8 +2205,8 @@ def get_saved_trading_config():
         "account_balance": _flt("saved_account_balance", 10000.0),
         "risk_pct": _flt("saved_risk_pct", 1.0),
         "risk_usd": max(1.0, _flt("saved_risk_usd", 10.0)),
-        "claude_base_url": s.get("claude_base_url", "https://api.laalaa.me"),
-        "claude_model": s.get("claude_model", "claude-sonnet-5-5"),
+        "claude_base_url": s.get("claude_base_url", "https://api.anthropic.com"),
+        "claude_model": s.get("claude_model", "claude-sonnet-4-5"),
         "has_claude_key": bool(s.get("claude_api_key", "").strip()),
         "updated_at": s.get("saved_config_updated_at", ""),
     }
